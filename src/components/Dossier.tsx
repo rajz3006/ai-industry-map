@@ -3,17 +3,19 @@
 import { edges, nodeById, sources } from "@/data/industry-map";
 import { tickers } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
-import { changeDirection, formatChangeAbs, formatChangePercent, formatPrice } from "@/lib/format";
+import { changeDirection, formatChangeAbs, formatChangePercent, formatPollLabel, formatPrice } from "@/lib/format";
 
 export default function Dossier({
   selected,
   onSelect,
   quotes,
+  pollMs,
   onOpenStock,
 }: {
   selected: string | null;
   onSelect: (id: string) => void;
   quotes: QuoteMap;
+  pollMs: number;
   onOpenStock: (symbol: string) => void;
 }) {
   if (!selected) {
@@ -83,7 +85,9 @@ export default function Dossier({
             );
           })}
           <div className="asof">
-            {tks.some((t) => t.isUS) ? "Live via Finnhub, polled every ~20s." : "Not financial advice — verify before trading."}
+            {tks.some((t) => t.isUS)
+              ? `Live via Finnhub, refreshed every ${formatPollLabel(pollMs)}.`
+              : "Not financial advice — verify before trading."}
           </div>
         </div>
       )}

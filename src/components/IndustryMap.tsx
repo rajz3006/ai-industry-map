@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { edges, nodes } from "@/data/industry-map";
-import { tickers } from "@/data/tickers";
+import { allUSSymbols } from "@/data/tickers";
 import { useQuotes } from "@/hooks/useQuotes";
+import { POLL_OPTIONS, usePollingInterval } from "@/hooks/usePollingInterval";
+import { formatPollLabel } from "@/lib/format";
 import NetworkGraph from "./NetworkGraph";
 import MobileMap from "./MobileMap";
 import Dossier from "./Dossier";
@@ -26,16 +28,12 @@ export default function IndustryMap() {
   const [selected, setSelected] = useState<string | null>("apple");
   const [search, setSearch] = useState("");
   const [stockSymbol, setStockSymbol] = useState<string | null>(null);
+  const [pollMs, setPollMs] = usePollingInterval();
 
-  // Only poll quotes for the symbol(s) relevant to the currently selected node while on
-  // the network tab — Markets tab handles its own (larger) polling set internally.
-  const selectedSymbols = useMemo(() => {
-    if (!selected) return [];
-    const tks = tickers[selected];
-    if (!tks) return [];
-    return tks.filter((t) => t.isUS).map((t) => t.symbol);
-  }, [selected]);
-  const { quotes } = useQuotes(view === "network" ? selectedSymbols : []);
+  // One shared poll covering every US-listed symbol in the map, used by the network graph,
+  // dossier panel and Markets table alike — avoids duplicate polling loops and means every
+  // node's ticker badge (not just the selected one) reflects a live change%.
+  const { quotes } = useQuotes(allUSSymbols, pollMs);
 
   function selectNode(id: string) {
     setSelected(id);
@@ -105,16 +103,32 @@ export default function IndustryMap() {
       </div>
 
       <nav className="toolbar" aria-label="Map view controls">
-        <div className="tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.view}
-              className={`tab ${view === t.view ? "active" : ""}`}
-              onClick={() => setView(t.view)}
+        <div className="toolbar-left">
+          <div className="tabs">
+            {TABS.map((t) => (
+              <button
+                key={t.view}
+                className={`tab ${view === t.view ? "active" : ""}`}
+                onClick={() => setView(t.view)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <label className="poll-select">
+            <span className="sr-only">Live price refresh interval</span>
+            <select
+              value={pollMs}
+              onChange={(e) => setPollMs(Number(e.target.value))}
+              aria-label="Live price refresh interval"
             >
-              {t.label}
-            </button>
-          ))}
+              {POLL_OPTIONS.map((o) => (
+                <option key={o.ms} value={o.ms}>
+                  Refresh: {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {view === "network" && (
           <label className="search">
@@ -166,7 +180,13 @@ export default function IndustryMap() {
             </div>
             <MobileMap onSelect={selectNode} quotes={quotes} />
           </div>
-          <Dossier selected={selected} onSelect={selectNode} quotes={quotes} onOpenStock={setStockSymbol} />
+          <Dossier
+            selected={selected}
+            onSelect={selectNode}
+            quotes={quotes}
+            pollMs={pollMs}
+            onOpenStock={setStockSymbol}
+          />
         </div>
         <section className="chain">
           <div className="chain-head">
@@ -203,7 +223,9 @@ export default function IndustryMap() {
       </section>
 
       <section className={`insight ${view === "markets" ? "active" : ""}`}>
-        {view === "markets" && <MarketsTable onSelectNode={selectNode} onOpenStock={setStockSymbol} />}
+        {view === "markets" && (
+          <MarketsTable quotes={quotes} pollMs={pollMs} onSelectNode={selectNode} onOpenStock={setStockSymbol} />
+        )}
       </section>
 
       <section className="method">
@@ -222,7 +244,8 @@ export default function IndustryMap() {
           <p>
             Relationship, ownership and concentration data ported from an independent six-domain cross-check
             (Sep 14–18, 2026 passes). Public-market prices are live, fetched from Finnhub&rsquo;s free-tier API
-            (US-listed stocks and ADRs only) and polled roughly every 20 seconds while a symbol is on screen.
+            (US-listed stocks and ADRs only) and refreshed every {formatPollLabel(pollMs)} — configurable from the
+            toolbar.
             Foreign-listed names (Samsung, SK Hynix, SMIC, Cambricon, the Taiwan ODMs, Innolight, Eoptolink,
             SoftBank) are not covered by Finnhub&rsquo;s free tier and show a live-pricing-unavailable notice
             instead of a stale or fabricated number. See the Markets tab or any node&rsquo;s panel for exchange and

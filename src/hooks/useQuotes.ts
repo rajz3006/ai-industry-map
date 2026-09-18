@@ -5,14 +5,13 @@ import type { QuoteResult } from "@/app/api/quote/route";
 
 export type QuoteMap = Record<string, QuoteResult | { error: string } | undefined>;
 
-const POLL_MS = 20_000;
-
 /**
- * Polls /api/quote for the given US-listed symbols every ~20s while `symbols` is non-empty.
- * Symbols should be limited to what's currently visible (Markets tab rows, or the selected
- * node's tickers) — the caller is responsible for keeping this list small.
+ * Polls /api/quote for the given US-listed symbols every `intervalMs` while `symbols` is
+ * non-empty. Pass `intervalMs <= 0` to fetch once (on mount / when the symbol set changes)
+ * without repeating. Symbols should be limited to what's currently visible — the caller is
+ * responsible for keeping this list reasonably small relative to the provider's rate limit.
  */
-export function useQuotes(symbols: string[]): { quotes: QuoteMap; loading: boolean } {
+export function useQuotes(symbols: string[], intervalMs: number): { quotes: QuoteMap; loading: boolean } {
   const [quotes, setQuotes] = useState<QuoteMap>({});
   const [loading, setLoading] = useState(false);
   const key = symbols.slice().sort().join(",");
@@ -37,12 +36,17 @@ export function useQuotes(symbols: string[]): { quotes: QuoteMap; loading: boole
     }
 
     fetchQuotes();
-    const interval = setInterval(fetchQuotes, POLL_MS);
+    if (intervalMs > 0) {
+      const interval = setInterval(fetchQuotes, intervalMs);
+      return () => {
+        cancelled = true;
+        clearInterval(interval);
+      };
+    }
     return () => {
       cancelled = true;
-      clearInterval(interval);
     };
-  }, [key]);
+  }, [key, intervalMs]);
 
   return { quotes, loading };
 }

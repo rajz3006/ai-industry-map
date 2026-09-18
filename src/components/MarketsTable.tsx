@@ -3,24 +3,26 @@
 import { useMemo, useState } from "react";
 import { nodeById } from "@/data/industry-map";
 import { allTickerRows } from "@/data/tickers";
-import { useQuotes } from "@/hooks/useQuotes";
-import { changeDirection, formatChangePercent, formatPrice, formatTimestamp } from "@/lib/format";
+import type { QuoteMap } from "@/hooks/useQuotes";
+import { changeDirection, formatChangePercent, formatPollLabel, formatPrice, formatTimestamp } from "@/lib/format";
 
-type SortKey = "name" | "ticker" | "price" | "chgPct" | "range" | "asOf";
+type SortKey = "name" | "layer" | "ticker" | "price" | "chgPct" | "range" | "asOf";
+
+const ALL_CATEGORIES = "All";
 
 export default function MarketsTable({
+  quotes,
+  pollMs,
   onSelectNode,
   onOpenStock,
 }: {
+  quotes: QuoteMap;
+  pollMs: number;
   onSelectNode: (id: string) => void;
   onOpenStock: (symbol: string) => void;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "chgPct", dir: -1 });
-  const usSymbols = useMemo(
-    () => Array.from(new Set(allTickerRows.filter((r) => r.isUS).map((r) => r.symbol))),
-    []
-  );
-  const { quotes } = useQuotes(usSymbols);
+  const [category, setCategory] = useState<string>(ALL_CATEGORIES);
 
   const rows = useMemo(() => {
     return allTickerRows.map((r) => {
@@ -30,6 +32,7 @@ export default function MarketsTable({
       return {
         nodeId: r.nodeId,
         name: n?.name ?? r.nodeId,
+        layer: n?.layer ?? "Other",
         symbol: r.symbol,
         exchange: r.exchange,
         isUS: r.isUS,
@@ -44,8 +47,25 @@ export default function MarketsTable({
     });
   }, [quotes]);
 
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const r of rows) {
+      if (!seen.has(r.layer)) {
+        seen.add(r.layer);
+        ordered.push(r.layer);
+      }
+    }
+    return [ALL_CATEGORIES, ...ordered];
+  }, [rows]);
+
+  const filtered = useMemo(
+    () => (category === ALL_CATEGORIES ? rows : rows.filter((r) => r.layer === category)),
+    [rows, category]
+  );
+
   const sorted = useMemo(() => {
-    const copy = rows.slice();
+    const copy = filtered.slice();
     copy.sort((a, b) => {
       let av: string | number | undefined;
       let bv: string | number | undefined;
@@ -53,6 +73,10 @@ export default function MarketsTable({
         case "name":
           av = a.name;
           bv = b.name;
+          break;
+        case "layer":
+          av = a.layer;
+          bv = b.layer;
           break;
         case "ticker":
           av = a.symbol;
@@ -84,7 +108,7 @@ export default function MarketsTable({
       return ((av as number) - (bv as number)) * sort.dir;
     });
     return copy;
-  }, [rows, sort]);
+  }, [filtered, sort]);
 
   function toggleSort(key: SortKey) {
     setSort((prev) => ({ key, dir: prev.key === key ? ((-prev.dir) as 1 | -1) : -1 }));
@@ -100,13 +124,30 @@ export default function MarketsTable({
             Crusoe, and others) have no market price and are omitted. Click a row to open its detail view.
           </p>
         </div>
-        <span className="mk-refresh">Live via Finnhub · polled every ~20s (US-listed only)</span>
+        <span className="mk-refresh">Live via Finnhub · refreshed every {formatPollLabel(pollMs)} (US-listed only)</span>
+      </div>
+      <div className="mk-categories" role="tablist" aria-label="Filter by category">
+        {categories.map((c) => (
+          <button
+            key={c}
+            className={`mk-cat ${category === c ? "active" : ""}`}
+            role="tab"
+            aria-selected={category === c}
+            onClick={() => setCategory(c)}
+          >
+            {c}
+            {c !== ALL_CATEGORIES && (
+              <span className="mk-cat-count">{rows.filter((r) => r.layer === c).length}</span>
+            )}
+          </button>
+        ))}
       </div>
       <div style={{ overflowX: "auto" }}>
         <table className="mk-table">
           <thead>
             <tr>
               <th onClick={() => toggleSort("name")}>Company</th>
+              <th onClick={() => toggleSort("layer")}>Category</th>
               <th onClick={() => toggleSort("ticker")}>Ticker</th>
               <th className="num" onClick={() => toggleSort("price")}>
                 Price
@@ -130,6 +171,7 @@ export default function MarketsTable({
                   >
                     {r.name}
                   </td>
+                  <td className="exch">{r.layer}</td>
                   <td>
                     {r.symbol}
                     <span className="exch"> {r.exchange}</span>

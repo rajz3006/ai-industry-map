@@ -47,6 +47,15 @@ export function formatDate(dateStr: string | undefined | null): string {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+/** Human label for a poll interval in ms, e.g. 300000 -> "5 min", 0 -> "manual/once". */
+export function formatPollLabel(ms: number): string {
+  if (ms <= 0) return "on load only (auto-refresh off)";
+  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
+  const minutes = ms / 60_000;
+  if (minutes < 60) return `${minutes} min`;
+  return `${minutes / 60}h`;
+}
+
 export function formatTimestamp(unixSeconds: number | undefined | null): string {
   if (!unixSeconds) return "—";
   const d = new Date(unixSeconds * 1000);
