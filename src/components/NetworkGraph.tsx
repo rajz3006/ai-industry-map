@@ -113,9 +113,7 @@ export default function NetworkGraph({
             .join(" ");
           return (
             <path key={e.id} d={edgePath(a, b)} className={cls} markerEnd={`url(#arrow-${e.type})`}>
-              <title>
-                {nodeById[e.from]?.name} → {nodeById[e.to]?.name}: {e.label}
-              </title>
+              <title>{`${nodeById[e.from]?.name ?? ""} → ${nodeById[e.to]?.name ?? ""}: ${e.label}`}</title>
             </path>
           );
         })}
