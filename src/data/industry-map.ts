@@ -111,7 +111,7 @@ export const nodes: MapNode[] = [
     "layer": "Cloud & compute",
     "sub": "$190B 2026 capex",
     "desc": "OpenAI’s primary cloud partner and a major buyer of Nvidia infrastructure, Nebius capacity and power.",
-    "fact": "Microsoft disclosed $13.0B of OpenAI funding commitments and an additional $250B Azure purchase commitment.",
+    "fact": "Microsoft's FY2026 10-K discloses $13.0B of OpenAI funding commitments, with OpenAI as the anchor AI workload on Azure.",
     "src": "microsoft"
   },
   {
@@ -643,7 +643,7 @@ export const edges: MapEdge[] = [
     "from": "openai",
     "to": "azure",
     "type": "partner",
-    "label": "increasing Azure consumption; $250B additional commitment",
+    "label": "increasing Azure consumption",
     "cite": "Microsoft FY2026 10-K",
     "id": "e0"
   },
@@ -1564,39 +1564,39 @@ export const sources: Record<string, SourceRef> = {
   },
   "apple": {
     "label": "MacRumors · Jun 8, 2026",
-    "url": null
+    "url": "https://www.macrumors.com/2026/06/08/apple-private-cloud-compute-google/"
   },
   "microsoft": {
     "label": "Microsoft FY2026 10-K · cross-validated",
-    "url": null
+    "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/msft-20260630.htm"
   },
   "metaMSL": {
     "label": "Reuters via Goldsea · Apr 8, 2026",
-    "url": null
+    "url": "http://goldsea.com/article_details/alexander-wangs-meta-superintelligence-lab-releases-first-ai-model"
   },
   "mistral": {
     "label": "Reuters · Sep 8, 2026",
-    "url": null
+    "url": "https://www.reuters.com/commentary/breakingviews/french-ai-minnow-bags-surprisingly-high-valuation-2026-09-08/"
   },
   "huggingface": {
     "label": "TechCrunch · Sep 3, 2026",
-    "url": null
+    "url": "https://techcrunch.com/2026/09/03/nvidia-confirms-it-will-buy-hugging-face-for-12-9-billion/"
   },
   "openaiRound": {
     "label": "OpenAI / PYMNTS · Mar 31, 2026",
-    "url": null
+    "url": "https://openai.com/index/accelerating-the-next-phase-ai/"
   },
   "spacex": {
     "label": "Reuters · Jun 11–15, 2026",
-    "url": null
+    "url": "https://www.reuters.com/world/musks-spacex-prices-record-75-billion-ipo-135-share-2026-06-11/"
   },
   "rocm": {
     "label": "EE Times · Mar 30, 2026",
-    "url": null
+    "url": "https://www.eetimes.com/taking-on-cuda-with-rocm-one-step-after-another/"
   },
   "cerebras": {
     "label": "TechCrunch · May 14, 2026",
-    "url": null
+    "url": "https://techcrunch.com/2026/05/14/cerebras-raises-5-5b-kicking-off-2026s-ipo-season-with-a-bang/"
   },
   "cambricon": {
     "label": "Morningstar · Jul 1, 2026",
@@ -1604,35 +1604,35 @@ export const sources: Record<string, SourceRef> = {
   },
   "packaging": {
     "label": "EE Times · Feb 6, 2026",
-    "url": null
+    "url": "https://www.eetimes.com/chip-assembler-ase-sees-advanced-packaging-sales-doubling/"
   },
   "eda": {
     "label": "Reuters / Synopsys · 2025–26",
-    "url": null
+    "url": "https://news.synopsys.com/2025-07-17-Synopsys-Completes-Acquisition-of-Ansys"
   },
   "optics": {
     "label": "TrendForce/LEDinside · Feb 11, 2026",
-    "url": null
+    "url": "https://www.ledinside.com/intelligence/2026/2/2026_02_11_09"
   },
   "interconnect": {
-    "label": "Morningstar/Futurum · 2026",
-    "url": null
+    "label": "Credo / Astera Labs · 2026 earnings reports",
+    "url": "https://investors.credosemi.com/news-events/news/news-details/2026/Credo-Technology-Group-Holding-Ltd-Reports-Fourth-Quarter-and-Fiscal-Year-2026-Financial-Results/default.aspx"
   },
   "odm": {
     "label": "Reuters / 2026 company reporting",
-    "url": null
+    "url": "https://www.reuters.com/world/asia-pacific/nvidia-supplier-wistron-launches-700-million-texas-factory-ai-system-production-2026-07-22/"
   },
   "vertiv": {
     "label": "Zacks · Jul 22, 2026",
-    "url": null
+    "url": "https://www.zacks.com/stock/news/2958512/vertivs-ai-data-center-footprint-grows-a-sign-for-more-upside"
   },
   "dc": {
     "label": "Reuters · 2026",
-    "url": null
+    "url": "https://www.reuters.com/technology/applied-digital-signs-52-billion-ai-data-center-lease-with-us-hyperscaler-2026-06-08/"
   },
   "utility": {
-    "label": "Reuters / POWER · 2025–26",
-    "url": null
+    "label": "POWER · 2025",
+    "url": "https://www.powermag.com/talen-amazon-launch-18b-nuclear-ppa-a-grid-connected-ipp-model-for-the-data-center-era/"
   },
   "humain": {
     "label": "Data Center Dynamics · Sep 11, 2026",
@@ -1640,19 +1640,19 @@ export const sources: Record<string, SourceRef> = {
   },
   "inference": {
     "label": "Reuters / TechCrunch · Jul 2026",
-    "url": null
+    "url": "https://www.reuters.com/technology/nvidia-backed-startup-fireworks-valued-175-billion-latest-funding-2026-07-16/"
   },
   "marvell": {
-    "label": "Marvell · Sep 9, 2026; validator cross-check",
-    "url": null
+    "label": "Marvell · Jun 1, 2026",
+    "url": "https://www.businesswire.com/news/home/20260601564526/en/Marvell-Announces-Availability-of-Industrys-First-102.4-Tbps-Switch-Purpose-Built-for-AI-and-Cloud-Data-Center-Infrastructure"
   },
   "dell": {
     "label": "Dell · Sep 1, 2026",
-    "url": null
+    "url": "https://www.businesswire.com/news/home/20260901574850/en/Dell-Technologies-Delivers-Second-Quarter-Fiscal-2027-Financial-Results"
   },
   "ge": {
     "label": "GE Vernova · Jul 22, 2026",
-    "url": null
+    "url": "https://gevernova.com/news/press-releases/ge-vernova-reports-second-quarter-2026-financial-results-raises-2026-financial"
   },
   "arm": {
     "label": "mlq.ai · Mar 24, 2026",

@@ -25,11 +25,22 @@ export function useQuotes(symbols: string[], intervalMs: number): { quotes: Quot
       setLoading(true);
       try {
         const res = await fetch(`/api/quote?symbols=${encodeURIComponent(symbolList.join(","))}`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`Quote request failed with status ${res.status}`);
         const data = (await res.json()) as QuoteMap;
         if (!cancelled) setQuotes((prev) => ({ ...prev, ...data }));
       } catch {
-        // Network hiccup — keep showing the last known values.
+        // A failed fetch must not leave symbols stuck on "loading…" forever.
+        // Mark symbols we've never successfully loaded as errored so the UI
+        // can show "unavailable"; keep last-known values for the rest.
+        if (!cancelled) {
+          setQuotes((prev) => {
+            const next: QuoteMap = { ...prev };
+            for (const s of symbolList) {
+              if (!(s in next)) next[s] = { error: "Quote service unreachable" };
+            }
+            return next;
+          });
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

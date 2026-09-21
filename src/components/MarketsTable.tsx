@@ -29,6 +29,7 @@ export default function MarketsTable({
       const n = nodeById[r.nodeId];
       const q = r.isUS ? quotes[r.symbol] : undefined;
       const live = q && !("error" in q) ? q : undefined;
+      const errored = !!q && "error" in q;
       return {
         nodeId: r.nodeId,
         name: n?.name ?? r.nodeId,
@@ -37,6 +38,7 @@ export default function MarketsTable({
         exchange: r.exchange,
         isUS: r.isUS,
         note: r.note,
+        errored,
         price: live?.price,
         changePercent: live?.changePercent,
         change: live?.change,
@@ -184,6 +186,8 @@ export default function MarketsTable({
                     {clickable ? (
                       typeof r.price === "number" ? (
                         formatPrice(r.price, r.symbol)
+                      ) : r.errored ? (
+                        <span className="unavail">unavailable</span>
                       ) : (
                         <span className="exch">loading…</span>
                       )
