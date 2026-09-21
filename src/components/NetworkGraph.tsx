@@ -7,6 +7,8 @@ import type { QuoteMap } from "@/hooks/useQuotes";
 import type { EarningsMap } from "@/app/api/earnings/route";
 import { earningsLabel, nextEarningsDate } from "@/hooks/useEarnings";
 import { changeDirection } from "@/lib/format";
+import { useTheme } from "@/hooks/useTheme";
+import { EDGE_COLORS } from "@/lib/theme";
 
 interface Position {
   x: number;
@@ -17,12 +19,6 @@ interface Position {
 
 const COL_X = [8, 225, 442, 659, 876, 1093];
 const CHART_H = 856;
-const ARROW_COLORS: Record<MapEdge["type"], string> = {
-  supply: "#46b8ad",
-  money: "#e7ad42",
-  power: "#e46d57",
-  partner: "#8e9bb9",
-};
 
 function computePositions(): Record<string, Position> {
   const positions: Record<string, Position> = {};
@@ -76,6 +72,8 @@ export default function NetworkGraph({
   earnings: EarningsMap;
 }) {
   const positions = useMemo(() => computePositions(), []);
+  const [theme] = useTheme();
+  const arrowColors = EDGE_COLORS[theme];
 
   const q = search.trim().toLowerCase();
   const matches = q
@@ -97,7 +95,7 @@ export default function NetworkGraph({
         </text>
       ))}
       <defs>
-        {(Object.keys(ARROW_COLORS) as MapEdge["type"][]).map((type) => (
+        {(Object.keys(arrowColors) as MapEdge["type"][]).map((type) => (
           <marker
             key={type}
             id={`arrow-${type}`}
@@ -108,7 +106,7 @@ export default function NetworkGraph({
             markerHeight="5"
             orient="auto-start-reverse"
           >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill={ARROW_COLORS[type]} />
+            <path d="M 0 0 L 10 5 L 0 10 z" fill={arrowColors[type]} />
           </marker>
         ))}
       </defs>

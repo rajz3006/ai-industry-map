@@ -7,6 +7,7 @@ import { useQuotes } from "@/hooks/useQuotes";
 import { useEarnings } from "@/hooks/useEarnings";
 import { usePriceAlerts, describeAlert } from "@/hooks/usePriceAlerts";
 import { POLL_OPTIONS, usePollingInterval } from "@/hooks/usePollingInterval";
+import { useTheme } from "@/hooks/useTheme";
 import { formatPollLabel } from "@/lib/format";
 import NetworkGraph from "./NetworkGraph";
 import MobileMap from "./MobileMap";
@@ -32,6 +33,7 @@ export default function IndustryMap() {
   const [search, setSearch] = useState("");
   const [stockSymbol, setStockSymbol] = useState<string | null>(null);
   const [pollMs, setPollMs] = usePollingInterval();
+  const [theme, setTheme] = useTheme();
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
 
@@ -152,6 +154,34 @@ export default function IndustryMap() {
             🔔 Alerts{alertApi.alerts.filter((a) => !a.triggeredAt).length > 0 && (
               <span className="alerts-count">{alertApi.alerts.filter((a) => !a.triggeredAt).length}</span>
             )}
+          </button>
+          <button
+            className="theme-toggle"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {theme === "dark" ? (
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="2" />
+                <path
+                  d="M12 2.5v2.4M12 19.1v2.4M21.5 12h-2.4M4.9 12H2.5M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M20.5 14.7A8.5 8.5 0 1 1 9.3 3.5a7 7 0 0 0 11.2 11.2Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+            <span>{theme === "dark" ? "Dark" : "Light"}</span>
           </button>
         </div>
         {view === "network" && (

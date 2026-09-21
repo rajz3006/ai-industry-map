@@ -8,6 +8,8 @@ import type { EarningsResult } from "@/app/api/earnings/route";
 import type { QuoteResult } from "@/app/api/quote/route";
 import { computeTechnicals, SIGNAL_COPY } from "@/lib/technicals";
 import { formatChangeAbs, formatChangePercent, formatDate, formatMarketCap, formatPrice, formatTimestamp } from "@/lib/format";
+import { useTheme } from "@/hooks/useTheme";
+import { CHART_THEME } from "@/lib/theme";
 
 const RANGES: Range[] = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y"];
 
@@ -53,6 +55,8 @@ export default function StockDetail({
   onSetAlert?: (symbol: string) => void;
 }) {
   const [range, setRange] = useState<Range>("1M");
+  const [theme] = useTheme();
+  const chartColors = CHART_THEME[theme];
   const quote = useApi<QuoteResult>(`/api/quote?symbols=${symbol}`);
   const profile = useApi<ProfileResult>(`/api/profile?symbol=${symbol}`);
   const candles = useApi<CandlesResult>(`/api/candles?symbol=${symbol}&range=${range}`);
@@ -74,10 +78,10 @@ export default function StockDetail({
   useEffect(() => {
     if (!chartRef.current) return;
     const chart = createChart(chartRef.current, {
-      layout: { background: { color: "transparent" }, textColor: "#a9ada8", fontFamily: "DM Mono, monospace", fontSize: 10 },
-      grid: { vertLines: { visible: false }, horzLines: { color: "#232b27" } },
-      rightPriceScale: { borderColor: "#303a35" },
-      timeScale: { borderColor: "#303a35" },
+      layout: { background: { color: "transparent" }, textColor: chartColors.text, fontFamily: "DM Mono, monospace", fontSize: 10 },
+      grid: { vertLines: { visible: false }, horzLines: { color: chartColors.grid } },
+      rightPriceScale: { borderColor: chartColors.border },
+      timeScale: { borderColor: chartColors.border },
       crosshair: { mode: 0 },
       autoSize: true,
     });
@@ -87,13 +91,29 @@ export default function StockDetail({
       chartApiRef.current = null;
       seriesRef.current = null;
     };
+    // Chart is created once per mount; theme/color changes are applied via
+    // applyOptions below instead of tearing down and recreating the chart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // lightweight-charts takes its colors as JS config, not CSS, so theme
+  // changes have to be pushed into the live chart instance explicitly.
+  useEffect(() => {
+    const chart = chartApiRef.current;
+    if (!chart) return;
+    chart.applyOptions({
+      layout: { textColor: chartColors.text },
+      grid: { horzLines: { color: chartColors.grid } },
+      rightPriceScale: { borderColor: chartColors.border },
+      timeScale: { borderColor: chartColors.border },
+    });
+  }, [chartColors]);
 
   useEffect(() => {
     const chart = chartApiRef.current;
     if (!chart || !candles.data?.points?.length) return;
     const up = liveQuote ? liveQuote.changePercent >= 0 : true;
-    const color = up ? "#74c69d" : "#ff725e";
+    const color = up ? chartColors.up : chartColors.down;
     if (seriesRef.current) {
       chart.removeSeries(seriesRef.current);
     }
@@ -109,7 +129,7 @@ export default function StockDetail({
     seriesRef.current = series;
     chart.timeScale().fitContent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candles.data]);
+  }, [candles.data, chartColors]);
 
   const dir = liveQuote ? (liveQuote.changePercent >= 0 ? "up" : "down") : "";
   const name = profile.data?.name ?? symbol;
