@@ -1005,12 +1005,6 @@ table.mk-table {
   border-collapse: collapse;
   font-size: 13px;
 }
-.mk-table thead th {
-  position: sticky;
-  top: 57px;
-  background: var(--paper);
-  z-index: 1;
-}
 .mk-table th {
   text-align: left;
   font: 500 10px "DM Mono", monospace;
@@ -1732,14 +1726,6 @@ table.mk-table {
   }
   .map-head {
     display: block;
-  }
-  .mk-table thead th {
-    /* The toolbar stacks to multiple rows below 700px, so its height varies with
-       content (alerts count, etc.) instead of the desktop single-row ~57px this
-       offset assumes. Rather than guess a taller magic number, drop the sticky
-       header on mobile — the table is short enough per category filter that it's
-       not a meaningful loss. */
-    position: static;
   }
   .map-side {
     align-items: flex-start;
