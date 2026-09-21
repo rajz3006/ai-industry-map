@@ -38,60 +38,63 @@ export default function Dossier({
   const src = sources[n.src];
   const tks = tickers[selected] ?? [];
   const usTicker = tks.find((t) => t.isUS);
+  // Primary ticker leads the market snapshot; any additional listings follow compactly.
+  const primary = usTicker ?? tks[0] ?? null;
+  const others = primary ? tks.filter((t) => t.symbol !== primary.symbol) : [];
   const nextEarnDate = usTicker ? nextEarningsDate(earnings, () => usTicker.symbol) : null;
   const nextEarnLabel = earningsLabel(nextEarnDate);
+
+  function tickerRow(t: (typeof tks)[number], hero: boolean) {
+    const q = t.isUS ? quotes[t.symbol] : undefined;
+    const hasQuote = q && !("error" in q);
+    const dir = hasQuote ? changeDirection((q as { changePercent: number }).changePercent) : "";
+    return (
+      <div
+        className={`mrow${hero ? " hero" : ""}`}
+        key={t.symbol}
+        onClick={() => t.isUS && onOpenStock(t.symbol)}
+        role={t.isUS ? "button" : undefined}
+      >
+        <span>
+          <span className="tk">{t.symbol}</span> <span className="exch">{t.exchange}</span>
+          {t.note && <span className="rng">{t.note}</span>}
+          {!t.isUS && !t.note && <span className="rng">Live pricing unavailable on this exchange — check a local source</span>}
+        </span>
+        <span>
+          {hasQuote ? (
+            <>
+              <span className="px">{formatPrice((q as { price: number }).price, t.symbol)}</span>
+              <span className={`chg ${dir}`}>
+                {formatChangePercent((q as { changePercent: number }).changePercent)} (
+                {formatChangeAbs((q as { change: number }).change)})
+              </span>
+            </>
+          ) : t.isUS ? (
+            <span className="px" style={{ color: "var(--dim)", fontSize: 11 }}>
+              {q && "error" in q ? "unavailable" : "loading…"}
+            </span>
+          ) : (
+            <span className="px" style={{ color: "var(--dim)", fontSize: 11 }}>
+              —
+            </span>
+          )}
+          {hero && t.isUS && <span className="open-detail">Detail →</span>}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <aside className="dossier" aria-live="polite">
       <div className="eyebrow">{n.layer}</div>
       <h2>{n.name}</h2>
       <p className="desc">{n.desc}</p>
-      <div className="fact">
-        <b>Signal</b>
-        <span>{n.fact}</span>
-      </div>
 
-      {tks.length > 0 && (
+      {primary && (
         <div className="market-block">
-          <b>Market price{tks.length > 1 ? "s" : ""}</b>
-          {tks.map((t) => {
-            const q = t.isUS ? quotes[t.symbol] : undefined;
-            const hasQuote = q && !("error" in q);
-            const dir = hasQuote ? changeDirection((q as { changePercent: number }).changePercent) : "";
-            return (
-              <div
-                className="mrow"
-                key={t.symbol}
-                onClick={() => t.isUS && onOpenStock(t.symbol)}
-                role={t.isUS ? "button" : undefined}
-              >
-                <span>
-                  <span className="tk">{t.symbol}</span> <span className="exch">{t.exchange}</span>
-                  {t.note && <span className="rng">{t.note}</span>}
-                  {!t.isUS && !t.note && <span className="rng">Live pricing unavailable on this exchange — check a local source</span>}
-                </span>
-                <span>
-                  {hasQuote ? (
-                    <>
-                      <span className="px">{formatPrice((q as { price: number }).price, t.symbol)}</span>
-                      <span className={`chg ${dir}`}>
-                        {formatChangePercent((q as { changePercent: number }).changePercent)} (
-                        {formatChangeAbs((q as { change: number }).change)})
-                      </span>
-                    </>
-                  ) : t.isUS ? (
-                    <span className="px" style={{ color: "var(--dim)", fontSize: 11 }}>
-                      {q && "error" in q ? "unavailable" : "loading…"}
-                    </span>
-                  ) : (
-                    <span className="px" style={{ color: "var(--dim)", fontSize: 11 }}>
-                      —
-                    </span>
-                  )}
-                </span>
-              </div>
-            );
-          })}
+          <b>Market</b>
+          {tickerRow(primary, true)}
+          {others.map((t) => tickerRow(t, false))}
           <div className="asof">
             {tks.some((t) => t.isUS)
               ? `Live via Finnhub, refreshed every ${formatPollLabel(pollMs)}.`
@@ -105,8 +108,6 @@ export default function Dossier({
           )}
         </div>
       )}
-
-      <NodeNews symbol={usTicker?.symbol ?? null} companyName={n.name} />
 
       <div className="links">
         <h3>
@@ -129,14 +130,20 @@ export default function Dossier({
         })}
       </div>
 
-      {src &&
-        (src.url ? (
-          <a className="source" href={src.url} target="_blank" rel="noopener noreferrer">
-            Signal source: {src.label} ↗
-          </a>
-        ) : (
-          <span className="source">Signal source: {src.label}</span>
-        ))}
+      <NodeNews symbol={usTicker?.symbol ?? null} companyName={n.name} />
+
+      <div className="fact">
+        <b>Signal</b>
+        <span>{n.fact}</span>
+        {src &&
+          (src.url ? (
+            <a className="source" href={src.url} target="_blank" rel="noopener noreferrer">
+              Reported by {src.label} ↗
+            </a>
+          ) : (
+            <span className="source">Reported by {src.label}</span>
+          ))}
+      </div>
     </aside>
   );
 }

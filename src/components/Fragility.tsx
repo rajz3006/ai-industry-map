@@ -128,6 +128,7 @@ export default function Fragility({ onSelectNode }: { onSelectNode: (id: string)
         )}
       </section>
 
+      <p className="section-asof">Structural concentration risks · assessed September 2026</p>
       <div className="risk-grid">
         {risks.map((r) => (
           <article className="risk-card" key={r.no}>

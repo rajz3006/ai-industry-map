@@ -20,9 +20,9 @@ import AlertsPanel from "./AlertsPanel";
 type View = "network" | "loops" | "risks" | "markets";
 
 const TABS: { view: View; label: string }[] = [
-  { view: "network", label: "Value chain" },
-  { view: "loops", label: "Money loops" },
-  { view: "risks", label: "Fragility" },
+  { view: "network", label: "The Map" },
+  { view: "loops", label: "Who pays whom" },
+  { view: "risks", label: "What breaks first" },
   { view: "markets", label: "Markets" },
 ];
 
@@ -72,11 +72,13 @@ export default function IndustryMap() {
           <h1>Who pays whom — and what breaks first</h1>
         </div>
         <p className="dek">
-          The AI economy is not a neat stack. It is a web of <strong>capital, compute commitments, chip supply and
-          power constraints</strong> concentrated in a few hands. Follow the links, then inspect the pressure points.
+          The AI economy is not a neat stack. It is a web of <strong>capital, compute, chips and power</strong>{" "}
+          concentrated in a few hands. <strong>Who pays whom</strong> follows the money;{" "}
+          <strong>What breaks first</strong> stress-tests the breaking points.
         </p>
       </section>
 
+      <p className="metrics-cap">Concentration snapshot · September 2026</p>
       <section className="metrics" aria-label="Key concentration metrics">
         <div className="metric">
           <b>~$0.9T</b>
@@ -111,17 +113,6 @@ export default function IndustryMap() {
           </span>
         </div>
       </section>
-
-      <div className="context">
-        <p>
-          <strong>Read the map as dependency, not market share.</strong> Lines show reported commercial or capital
-          relationships; thickness does not encode deal value. Dashed gold links are investment flows. Red links
-          point toward power dependencies.
-        </p>
-        <span className="stamp">
-          {nodes.length} selected nodes · {edges.length} reported links
-        </span>
-      </div>
 
       <nav className="toolbar" aria-label="Map view controls">
         <div className="toolbar-left">
@@ -182,51 +173,11 @@ export default function IndustryMap() {
       </nav>
 
       <section className={`insight ${view === "network" ? "active" : ""}`}>
-        <div className="map-shell">
-          <div className="chart-side">
-            <div className="map-head">
-              <div>
-                <h2>The dependency graph</h2>
-                <p>Select a company to isolate its incoming and outgoing links.</p>
-              </div>
-              <div className="legend">
-                <span className="key" style={{ color: "var(--supply)" }}>
-                  <i className="swatch" />
-                  supply
-                </span>
-                <span className="key" style={{ color: "var(--money)" }}>
-                  <i className="swatch dash" />
-                  capital
-                </span>
-                <span className="key" style={{ color: "var(--partner)" }}>
-                  <i className="swatch" />
-                  customer / partner
-                </span>
-                <span className="key" style={{ color: "var(--power)" }}>
-                  <i className="swatch" />
-                  power
-                </span>
-              </div>
-            </div>
-            <div className="desktop-map">
-              <NetworkGraph selected={selected} onSelect={selectNode} search={search} quotes={quotes} earnings={earnings} />
-            </div>
-            <MobileMap onSelect={selectNode} quotes={quotes} earnings={earnings} />
-          </div>
-          <Dossier
-            selected={selected}
-            onSelect={selectNode}
-            quotes={quotes}
-            earnings={earnings}
-            pollMs={pollMs}
-            onOpenStock={setStockSymbol}
-          />
-        </div>
-        <section className="chain">
-          <div className="chain-head">
-            <h2>One prompt, eight dependencies</h2>
-            <p>A simplified physical route from model demand to electricity. Each hop can delay the one above it.</p>
-          </div>
+        <details className="reading-guide">
+          <summary>
+            <b>How to read the columns</b>
+            <span>One prompt, eight dependencies — each hop can delay the one above it.</span>
+          </summary>
           <div className="route">
             {[
               ["Frontier lab", "model demand"],
@@ -245,7 +196,55 @@ export default function IndustryMap() {
               </div>
             ))}
           </div>
-        </section>
+        </details>
+        <div className="map-shell">
+          <div className="chart-side">
+            <div className="map-head">
+              <div>
+                <h2>The dependency graph</h2>
+                <p>
+                  Lines show reported commercial or capital relationships — read as <b>dependency, not market
+                  share</b>. Thickness does not encode deal value. Select a company to isolate its links.
+                </p>
+              </div>
+              <div className="map-side">
+                <div className="legend">
+                  <span className="key" style={{ color: "var(--supply)" }}>
+                    <i className="swatch" />
+                    supply
+                  </span>
+                  <span className="key" style={{ color: "var(--money)" }}>
+                    <i className="swatch dash" />
+                    capital
+                  </span>
+                  <span className="key" style={{ color: "var(--partner)" }}>
+                    <i className="swatch" />
+                    customer / partner
+                  </span>
+                  <span className="key" style={{ color: "var(--power)" }}>
+                    <i className="swatch" />
+                    power
+                  </span>
+                </div>
+                <span className="stamp">
+                  {nodes.length} nodes · {edges.length} reported links
+                </span>
+              </div>
+            </div>
+            <div className="desktop-map">
+              <NetworkGraph selected={selected} onSelect={selectNode} search={search} quotes={quotes} earnings={earnings} />
+            </div>
+            <MobileMap onSelect={selectNode} quotes={quotes} earnings={earnings} />
+          </div>
+          <Dossier
+            selected={selected}
+            onSelect={selectNode}
+            quotes={quotes}
+            earnings={earnings}
+            pollMs={pollMs}
+            onOpenStock={setStockSymbol}
+          />
+        </div>
       </section>
 
       <section className={`insight ${view === "loops" ? "active" : ""}`}>
@@ -263,29 +262,19 @@ export default function IndustryMap() {
       </section>
 
       <section className="method">
-        <div>
-          <h2>How to use this map</h2>
-          <p>
-            Start with a model lab, then follow its cloud commitments into software, accelerators, foundries,
-            memory, packaging, racks and power. Apple is mapped through Private Cloud Compute, Google Cloud, Nvidia
-            GPUs and TSMC. This is a selected dependency graph rather than a complete company census. Nodes with
-            &ldquo;reported,&rdquo; &ldquo;talks&rdquo; or &ldquo;estimate&rdquo; retain that caveat; unverified
-            claims were removed.
-          </p>
-        </div>
-        <div className="notes">
-          <h2>Reporting basis</h2>
-          <p>
-            Relationship, ownership and concentration data ported from an independent six-domain cross-check
-            (Sep 14–18, 2026 passes). Public-market prices are live, fetched from Finnhub&rsquo;s free-tier API
-            (US-listed stocks and ADRs only) and refreshed every {formatPollLabel(pollMs)} — configurable from the
-            toolbar.
-            Foreign-listed names (Samsung, SK Hynix, SMIC, Cambricon, the Taiwan ODMs, Innolight, Eoptolink,
-            SoftBank) are not covered by Finnhub&rsquo;s free tier and show a live-pricing-unavailable notice
-            instead of a stale or fabricated number. See the Markets tab or any node&rsquo;s panel for exchange and
-            ticker detail, and the project README for API and deployment notes.
-          </p>
-        </div>
+        <h2>About the data</h2>
+        <p>
+          A selected dependency graph, not a company census. Lines show reported commercial or capital
+          relationships; relationship, ownership and concentration figures reflect an independent six-domain
+          cross-check (Sep 14–18, 2026). Nodes marked &ldquo;reported,&rdquo; &ldquo;talks&rdquo; or
+          &ldquo;estimate&rdquo; retain that caveat; unverified claims were removed.
+        </p>
+        <p>
+          Public-market prices are live via Finnhub&rsquo;s free-tier API (US-listed stocks and ADRs only),
+          refreshed every {formatPollLabel(pollMs)} — configurable in the toolbar. Foreign-listed names
+          (Samsung, SK Hynix, SMIC, Cambricon, the Taiwan ODMs, Innolight, Eoptolink, SoftBank) show a
+          live-pricing-unavailable notice instead of a stale or fabricated number.
+        </p>
       </section>
 
       {stockSymbol && (

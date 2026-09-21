@@ -45,16 +45,28 @@ const loops = [
 
 export default function MoneyLoops() {
   return (
-    <div className="loop-grid">
-      {loops.map((l) => (
-        <article className="loop" key={l.path}>
-          <div className="loop-path">{l.path}</div>
-          <h3>{l.title}</h3>
-          <p>{l.body}</p>
-          <span className="loop-val">{l.val}</span>
-          <small>{l.note}</small>
-        </article>
-      ))}
+    <div>
+      <div className="loops-head">
+        <div>
+          <h2>Where the money circles back</h2>
+          <p>
+            Investment flows from suppliers and clouds into the labs — and lab spending flows back as cloud
+            and chip revenue. Each loop names the reported commitments behind it.
+          </p>
+        </div>
+        <span className="asof-tag">Reported commitments · September 2026</span>
+      </div>
+      <div className="loop-grid">
+        {loops.map((l) => (
+          <article className="loop" key={l.path}>
+            <div className="loop-path">{l.path}</div>
+            <h3>{l.title}</h3>
+            <p>{l.body}</p>
+            <span className="loop-val">{l.val}</span>
+            <small>{l.note}</small>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
