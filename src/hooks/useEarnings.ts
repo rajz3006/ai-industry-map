@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import type { EarningsMap } from "@/app/api/earnings/route";
 
 export const EARNINGS_REFRESH_MS = 6 * 60 * 60 * 1000; // calendars move slowly
+// Earnings data is slow-changing and not time-critical, unlike price quotes. Delaying the
+// first fetch keeps it from competing with the quote batch for the shared Finnhub rate-limit
+// budget on a cold page load — both hooks fire on mount, and a combined ~90-symbol burst
+// (45 quotes + 45 earnings) can exceed the free-tier 60/min cap and queue for a while.
+const INITIAL_FETCH_DELAY_MS = 15_000;
 
 /**
  * Fetches next/previous earnings dates for a batch of symbols via
@@ -44,16 +49,15 @@ export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFR
       }
     }
 
-    fetchEarnings();
+    const initialTimer = setTimeout(fetchEarnings, INITIAL_FETCH_DELAY_MS);
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (refreshMs > 0) {
-      const interval = setInterval(fetchEarnings, refreshMs);
-      return () => {
-        cancelled = true;
-        clearInterval(interval);
-      };
+      interval = setInterval(fetchEarnings, refreshMs + INITIAL_FETCH_DELAY_MS);
     }
     return () => {
       cancelled = true;
+      clearTimeout(initialTimer);
+      if (interval) clearInterval(interval);
     };
   }, [key, refreshMs]);
 

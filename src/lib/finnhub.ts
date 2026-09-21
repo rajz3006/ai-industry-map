@@ -36,6 +36,34 @@ export class FinnhubError extends Error {
   }
 }
 
+// Shared, process-wide rolling-window rate limiter for ALL outbound Finnhub calls,
+// regardless of which route makes them. Free tier caps at 60 req/min; each route's own
+// mapWithConcurrency(6) limiter only bounds concurrency *within* that one route, so e.g.
+// a page load firing /api/quote and /api/earnings at once (45 symbols each) could burst
+// ~90 near-simultaneous calls and get 429'd across the board. This queues calls so the
+// combined total across every route stays under the cap, and backs off on a 429 that
+// still slips through (e.g. from load before this process's window has any history).
+const RATE_LIMIT = 50; // stay safely under Finnhub's 60/min free-tier cap
+const WINDOW_MS = 60_000;
+const callTimestamps: number[] = [];
+
+async function waitForRateLimitSlot(): Promise<void> {
+  for (;;) {
+    const now = Date.now();
+    while (callTimestamps.length && now - callTimestamps[0] > WINDOW_MS) {
+      callTimestamps.shift();
+    }
+    if (callTimestamps.length < RATE_LIMIT) {
+      callTimestamps.push(now);
+      return;
+    }
+    const waitMs = WINDOW_MS - (now - callTimestamps[0]) + 25;
+    await new Promise((resolve) => setTimeout(resolve, Math.max(waitMs, 50)));
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function finnhubGet<T>(path: string, params: Record<string, string | number>): Promise<T> {
   const key = getFinnhubKey();
   if (!key) {
@@ -45,15 +73,25 @@ export async function finnhubGet<T>(path: string, params: Record<string, string 
     ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
     token: key,
   });
-  const res = await fetch(`${BASE_URL}${path}?${qs.toString()}`, {
-    // Finnhub responses change frequently; caching is handled by our own layer + route headers.
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw new FinnhubError(`Finnhub request failed (${res.status}) for ${path}`, res.status);
+  const url = `${BASE_URL}${path}?${qs.toString()}`;
+
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    await waitForRateLimitSlot();
+    const res = await fetch(url, {
+      // Finnhub responses change frequently; caching is handled by our own layer + route headers.
+      cache: "no-store",
+    });
+    if (res.status === 429 && attempt < MAX_ATTEMPTS) {
+      await sleep(500 * attempt);
+      continue;
+    }
+    if (!res.ok) {
+      throw new FinnhubError(`Finnhub request failed (${res.status}) for ${path}`, res.status);
+    }
+    return (await res.json()) as T;
   }
-  const data = (await res.json()) as T;
-  return data;
+  throw new FinnhubError(`Finnhub request failed (429, rate limited) for ${path}`, 429);
 }
 
 /** Runs async tasks with a max concurrency, preserving input order in the output array. */
