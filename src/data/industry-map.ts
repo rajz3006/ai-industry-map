@@ -75,7 +75,7 @@ export const nodes: MapNode[] = [
     "layer": "Frontier labs",
     "sub": "Muse Spark · Apr 2026",
     "desc": "Meta Superintelligence Labs is led by Alexandr Wang after Meta’s $14.3B Scale AI deal.",
-    "fact": "Released the proprietary Muse Spark model family on April 8, 2026.",
+    "fact": "Released the proprietary Muse Spark model family on April 8, 2026. Muse, Meta's consumer agentic app built on it, topped US free iPhone app charts for three straight days in September 2026, fueling a sector-wide re-rating of server-CPU demand (Arm, AMD, Intel, Qualcomm) for agentic-inference workloads.",
     "src": "metaMSL"
   },
   {
@@ -237,7 +237,7 @@ export const nodes: MapNode[] = [
     "layer": "Software & silicon",
     "sub": "MI450 challenger",
     "desc": "Accelerator challenger building a full system and networking stack.",
-    "fact": "MI450 is specified with 432GB HBM4; the $14B Core Scientific figure is lease value, not a chip order.",
+    "fact": "MI450 is specified with 432GB HBM4; the $14B Core Scientific figure is lease value, not a chip order. Rose ~3-6% in September 2026 alongside Arm and Intel as Meta's Muse agentic app surged in App Store rankings, reinforcing the $60B/6GW Meta Instinct GPU commitment signed Feb 24, 2026.",
     "src": "servers"
   },
   {
@@ -516,7 +516,7 @@ export const nodes: MapNode[] = [
     "layer": "Software & silicon",
     "sub": "Neoverse · AGI CPU",
     "desc": "Architecture licensor whose designs underpin Nvidia Grace/Vera, AWS Graviton, Azure Cobalt and Google Axion — and, since March 2026, its own production CPU.",
-    "fact": "The AGI CPU (announced Mar 24, 2026) is Arm's first production chip in 35 years, co-developed with Meta; Arm-based designs were estimated near 50% of hyperscaler CPU share in 2026.",
+    "fact": "The AGI CPU (announced Mar 24, 2026) is Arm's first production chip in 35 years, co-developed with Meta; Arm-based designs were estimated near 50% of hyperscaler CPU share in 2026. Gained ~4-9% in September 2026 as Meta's Muse agentic app drove expectations that agentic-inference workloads need more server CPUs, not just GPUs — building on Arm's Oct 2025 Neoverse partnership powering Meta's ranking and recommendation infrastructure.",
     "src": "arm"
   },
   {
@@ -552,7 +552,7 @@ export const nodes: MapNode[] = [
     "layer": "Software & silicon",
     "sub": "Xeon 6+ · Gaudi",
     "desc": "Legacy CPU leader supplying Xeon server processors into AI systems while its own accelerator and foundry ambitions lag rivals.",
-    "fact": "Twelve new Xeon 6+-optimized Supermicro server families launched alongside AMD and Arm platforms in Supermicro's mid-2026 rack-scale product wave.",
+    "fact": "Twelve new Xeon 6+-optimized Supermicro server families launched alongside AMD and Arm platforms in Supermicro's mid-2026 rack-scale product wave. Rallied ~6-8% in September 2026 alongside Arm and AMD as Meta's Muse agentic app topped App Store charts and investors re-rated the whole server-CPU sector for agentic-inference demand — notably without a specific Intel-Meta deal: Meta's own recent CPU contracts (Arm Neoverse, Qualcomm Dragonfly) bypassed Intel entirely.",
     "src": "intel"
   },
   {
@@ -1366,6 +1366,30 @@ export const edges: MapEdge[] = [
     "label": "500MW Saudi data center; $3B Humain investment",
     "cite": "CNBC · Nov 20, 2025",
     "id": "e90"
+  },
+  {
+    "from": "arm",
+    "to": "metadc",
+    "type": "supply",
+    "label": "Neoverse-based CPUs for AI ranking & recommendation infrastructure",
+    "cite": "TechCrunch / Arm Newsroom · Oct 15, 2025",
+    "id": "e91"
+  },
+  {
+    "from": "metadc",
+    "to": "amd",
+    "type": "partner",
+    "label": "$60B/6GW Instinct MI450 GPU deal; warrant for up to 160M AMD shares",
+    "cite": "AMD Newsroom / about.fb.com · Feb 24, 2026",
+    "id": "e92"
+  },
+  {
+    "from": "qualcomm",
+    "to": "metadc",
+    "type": "supply",
+    "label": "Dragonfly C1000 multi-generation data-center CPU roadmap",
+    "cite": "Qualcomm / CNBC · Jun 24, 2026",
+    "id": "e93"
   }
 ];
 
