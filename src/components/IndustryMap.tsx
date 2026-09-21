@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { edges, nodes } from "@/data/industry-map";
 import { allUSSymbols } from "@/data/tickers";
 import { useQuotes } from "@/hooks/useQuotes";
+import { useEarnings } from "@/hooks/useEarnings";
+import { usePriceAlerts, describeAlert } from "@/hooks/usePriceAlerts";
 import { POLL_OPTIONS, usePollingInterval } from "@/hooks/usePollingInterval";
 import { formatPollLabel } from "@/lib/format";
 import NetworkGraph from "./NetworkGraph";
@@ -13,6 +15,7 @@ import MoneyLoops from "./MoneyLoops";
 import Fragility from "./Fragility";
 import MarketsTable from "./MarketsTable";
 import StockDetail from "./StockDetail";
+import AlertsPanel from "./AlertsPanel";
 
 type View = "network" | "loops" | "risks" | "markets";
 
@@ -29,11 +32,29 @@ export default function IndustryMap() {
   const [search, setSearch] = useState("");
   const [stockSymbol, setStockSymbol] = useState<string | null>(null);
   const [pollMs, setPollMs] = usePollingInterval();
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
+
+  // Escape closes the topmost overlay first (alerts panel, then stock drawer).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (alertsOpen) setAlertsOpen(false);
+      else setStockSymbol(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [alertsOpen]);
 
   // One shared poll covering every US-listed symbol in the map, used by the network graph,
   // dossier panel and Markets table alike — avoids duplicate polling loops and means every
   // node's ticker badge (not just the selected one) reflects a live change%.
   const { quotes } = useQuotes(allUSSymbols, pollMs);
+  // Earnings calendars move slowly: one shared batch fetch, refreshed every 6 hours,
+  // powering the "E {date}" labels on nodes, mobile cards and the dossier.
+  const { earnings } = useEarnings(allUSSymbols);
+  // User-created, browser-local price alerts, evaluated against the shared quote poll.
+  const alertApi = usePriceAlerts(quotes);
 
   function selectNode(id: string) {
     setSelected(id);
@@ -129,6 +150,18 @@ export default function IndustryMap() {
               ))}
             </select>
           </label>
+          <button
+            className="alerts-open"
+            onClick={() => {
+              setAlertSymbol(null);
+              setAlertsOpen(true);
+            }}
+            aria-label={`Price alerts${alertApi.alerts.length ? `, ${alertApi.alerts.length} active` : ""}`}
+          >
+            🔔 Alerts{alertApi.alerts.filter((a) => !a.triggeredAt).length > 0 && (
+              <span className="alerts-count">{alertApi.alerts.filter((a) => !a.triggeredAt).length}</span>
+            )}
+          </button>
         </div>
         {view === "network" && (
           <label className="search">
@@ -176,14 +209,15 @@ export default function IndustryMap() {
               </div>
             </div>
             <div className="desktop-map">
-              <NetworkGraph selected={selected} onSelect={selectNode} search={search} quotes={quotes} />
+              <NetworkGraph selected={selected} onSelect={selectNode} search={search} quotes={quotes} earnings={earnings} />
             </div>
-            <MobileMap onSelect={selectNode} quotes={quotes} />
+            <MobileMap onSelect={selectNode} quotes={quotes} earnings={earnings} />
           </div>
           <Dossier
             selected={selected}
             onSelect={selectNode}
             quotes={quotes}
+            earnings={earnings}
             pollMs={pollMs}
             onOpenStock={setStockSymbol}
           />
@@ -219,7 +253,7 @@ export default function IndustryMap() {
       </section>
 
       <section className={`insight ${view === "risks" ? "active" : ""}`}>
-        <Fragility />
+        <Fragility onSelectNode={selectNode} />
       </section>
 
       <section className={`insight ${view === "markets" ? "active" : ""}`}>
@@ -254,7 +288,38 @@ export default function IndustryMap() {
         </div>
       </section>
 
-      {stockSymbol && <StockDetail symbol={stockSymbol} onClose={() => setStockSymbol(null)} />}
+      {stockSymbol && (
+        <StockDetail
+          symbol={stockSymbol}
+          onClose={() => setStockSymbol(null)}
+          onSetAlert={(sym) => {
+            setAlertSymbol(sym);
+            setAlertsOpen(true);
+          }}
+        />
+      )}
+      <AlertsPanel
+        key={`alerts-${alertsOpen}-${alertSymbol ?? "none"}`}
+        open={alertsOpen}
+        onClose={() => setAlertsOpen(false)}
+        initialSymbol={alertSymbol}
+        quotes={quotes}
+        alerts={alertApi.alerts}
+        fired={alertApi.fired}
+        addAlert={alertApi.addAlert}
+        removeAlert={alertApi.removeAlert}
+        clearFired={alertApi.clearFired}
+      />
+      {alertApi.fired.length > 0 && (
+        <div className="toast-stack" aria-live="polite">
+          {alertApi.fired.slice(0, 3).map((a) => (
+            <div className="toast" key={a.id}>
+              <b>🔔 {a.symbol}</b> is {describeAlert(a)}
+              <button onClick={() => alertApi.clearFired(a.id)} aria-label="Dismiss">×</button>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

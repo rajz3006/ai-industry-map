@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { columns, edges, nodeById, nodes, type MapEdge } from "@/data/industry-map";
 import { tickers } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
+import type { EarningsMap } from "@/app/api/earnings/route";
+import { earningsLabel, nextEarningsDate } from "@/hooks/useEarnings";
 import { changeDirection } from "@/lib/format";
 
 interface Position {
@@ -50,7 +52,14 @@ function primaryTicker(nodeId: string, quotes: QuoteMap) {
   const symbol = us?.symbol ?? tks[0].symbol;
   const q = us ? quotes[us.symbol] : undefined;
   const pct = q && !("error" in q) ? q.changePercent : undefined;
-  return { symbol, pct };
+  return { symbol, pct, usSymbol: us?.symbol };
+}
+
+function earningsForNode(nodeId: string, earnings: EarningsMap): string | null {
+  const tks = tickers[nodeId];
+  const us = tks?.find((t) => t.isUS);
+  if (!us) return null;
+  return earningsLabel(nextEarningsDate(earnings, () => us.symbol));
 }
 
 export default function NetworkGraph({
@@ -58,11 +67,13 @@ export default function NetworkGraph({
   onSelect,
   search,
   quotes,
+  earnings,
 }: {
   selected: string | null;
   onSelect: (id: string) => void;
   search: string;
   quotes: QuoteMap;
+  earnings: EarningsMap;
 }) {
   const positions = useMemo(() => computePositions(), []);
 
@@ -126,6 +137,7 @@ export default function NetworkGraph({
           const isMuted = matches ? !matches.has(n.id) : selected ? n.id !== selected && !connectedIds.has(n.id) : false;
           const tk = primaryTicker(n.id, quotes);
           const dir = tk ? changeDirection(tk.pct) : "";
+          const earn = earningsForNode(n.id, earnings);
           return (
             <g
               key={n.id}
@@ -149,6 +161,11 @@ export default function NetworkGraph({
               <text className="sub" x={11} y={34}>
                 {n.sub}
               </text>
+              {earn && (
+                <text className="earnings" x={pos.w - 8} y={34} textAnchor="end">
+                  {earn}
+                </text>
+              )}
               {tk && (
                 <text className={`ticker ${dir}`} x={pos.w - 8} y={14} textAnchor="end">
                   {tk.symbol}

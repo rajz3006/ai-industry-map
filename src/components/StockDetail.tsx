@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AreaSeries, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import type { ProfileResult } from "@/app/api/profile/route";
 import type { CandlesResult, Range } from "@/app/api/candles/route";
 import type { EarningsResult } from "@/app/api/earnings/route";
 import type { QuoteResult } from "@/app/api/quote/route";
+import { computeTechnicals, SIGNAL_COPY } from "@/lib/technicals";
 import { formatChangeAbs, formatChangePercent, formatDate, formatMarketCap, formatPrice, formatTimestamp } from "@/lib/format";
 
 const RANGES: Range[] = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y"];
@@ -42,12 +43,26 @@ function useApi<T>(url: string | null): Fetchable<T> {
   return state;
 }
 
-export default function StockDetail({ symbol, onClose }: { symbol: string; onClose: () => void }) {
+export default function StockDetail({
+  symbol,
+  onClose,
+  onSetAlert,
+}: {
+  symbol: string;
+  onClose: () => void;
+  onSetAlert?: (symbol: string) => void;
+}) {
   const [range, setRange] = useState<Range>("1M");
   const quote = useApi<QuoteResult>(`/api/quote?symbols=${symbol}`);
   const profile = useApi<ProfileResult>(`/api/profile?symbol=${symbol}`);
   const candles = useApi<CandlesResult>(`/api/candles?symbol=${symbol}&range=${range}`);
   const earnings = useApi<EarningsResult>(`/api/earnings?symbol=${symbol}`);
+  // Dedicated 1Y daily series for technical signals, independent of the chart range.
+  const techCandles = useApi<CandlesResult>(`/api/candles?symbol=${symbol}&range=1Y`);
+  const technicals = useMemo(
+    () => (techCandles.data?.points?.length ? computeTechnicals(techCandles.data.points.map((p) => p.value)) : null),
+    [techCandles.data]
+  );
 
   const quoteData = quote.data && (quote.data as unknown as Record<string, QuoteResult | { error: string }>)[symbol];
   const liveQuote = quoteData && !("error" in quoteData) ? (quoteData as QuoteResult) : undefined;
@@ -125,6 +140,11 @@ export default function StockDetail({ symbol, onClose }: { symbol: string; onClo
           <div className="unavailable-note">
             {quoteData && "error" in quoteData ? quoteData.error : "Live price unavailable."}
           </div>
+        )}
+        {onSetAlert && (
+          <button className="alert-add secondary stock-alert-btn" onClick={() => onSetAlert(symbol)}>
+            🔔 Set price alert
+          </button>
         )}
 
         <div className="range-tabs">
@@ -205,6 +225,41 @@ export default function StockDetail({ symbol, onClose }: { symbol: string; onClo
             Company site ↗
           </a>
         )}
+
+        <div className="tech-block">
+          <h3>Technical signals</h3>
+          {techCandles.loading && !technicals ? (
+            <div className="unavailable-note">Computing signals…</div>
+          ) : technicals?.unavailable ? (
+            <div className="unavailable-note">{technicals.unavailable}</div>
+          ) : technicals ? (
+            <>
+              <div className={`tech-overall ${technicals.overall}`}>
+                <b>{SIGNAL_COPY[technicals.overall].label}</b>
+                <span>{SIGNAL_COPY[technicals.overall].blurb}</span>
+              </div>
+              <div className="tech-rows">
+                {technicals.indicators.map((ind) => (
+                  <div className="tech-row" key={ind.name}>
+                    <span className="tech-name">{ind.name}</span>
+                    <span className="tech-value">{ind.value}</span>
+                    <span className={`tech-chip ${ind.signal}`}>{ind.signal}</span>
+                    <span className="tech-detail">{ind.detail}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="tech-disclaimer">
+                Rules-based read of the last {technicals.pointsUsed} daily sessions (SMA trend, RSI-14, MACD).
+                Signals are backward-looking, can conflict with fundamentals, and are <b>not financial advice</b> —
+                not a buy or sell recommendation.
+              </p>
+            </>
+          ) : (
+            <div className="unavailable-note">
+              {techCandles.error || "Signal data unavailable for this symbol."}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -3,18 +3,23 @@
 import { edges, nodeById, sources } from "@/data/industry-map";
 import { tickers } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
-import { changeDirection, formatChangeAbs, formatChangePercent, formatPollLabel, formatPrice } from "@/lib/format";
+import type { EarningsMap } from "@/app/api/earnings/route";
+import { earningsLabel, nextEarningsDate } from "@/hooks/useEarnings";
+import NodeNews from "./NodeNews";
+import { changeDirection, formatChangeAbs, formatChangePercent, formatDate, formatPollLabel, formatPrice } from "@/lib/format";
 
 export default function Dossier({
   selected,
   onSelect,
   quotes,
+  earnings,
   pollMs,
   onOpenStock,
 }: {
   selected: string | null;
   onSelect: (id: string) => void;
   quotes: QuoteMap;
+  earnings: EarningsMap;
   pollMs: number;
   onOpenStock: (symbol: string) => void;
 }) {
@@ -32,6 +37,9 @@ export default function Dossier({
   const connected = edges.filter((e) => e.from === selected || e.to === selected);
   const src = sources[n.src];
   const tks = tickers[selected] ?? [];
+  const usTicker = tks.find((t) => t.isUS);
+  const nextEarnDate = usTicker ? nextEarningsDate(earnings, () => usTicker.symbol) : null;
+  const nextEarnLabel = earningsLabel(nextEarnDate);
 
   return (
     <aside className="dossier" aria-live="polite">
@@ -89,8 +97,16 @@ export default function Dossier({
               ? `Live via Finnhub, refreshed every ${formatPollLabel(pollMs)}.`
               : "Not financial advice — verify before trading."}
           </div>
+          {usTicker && nextEarnDate && (
+            <div className="earn-line">
+              Next earnings {usTicker.symbol}: <b>{formatDate(nextEarnDate)}</b>
+              {nextEarnLabel && <span className="earn-tag">{nextEarnLabel}</span>}
+            </div>
+          )}
         </div>
       )}
+
+      <NodeNews symbol={usTicker?.symbol ?? null} companyName={n.name} />
 
       <div className="links">
         <h3>
