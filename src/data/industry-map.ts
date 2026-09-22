@@ -635,6 +635,69 @@ export const nodes: MapNode[] = [
     "desc": "Model-serving and fine-tuning cloud that has moved beyond pure inference into sovereign-scale infrastructure deals.",
     "fact": "Signed on for a planned 250MW facility with Saudi Arabia's Humain at LEAP 2026, on top of its own $800M raise.",
     "src": "inference"
+  },
+  {
+    "id": "wdc",
+    "name": "Western Digital",
+    "layer": "Fabrication & links",
+    "sub": "HDD + NAND · capacity sold out",
+    "desc": "HDD and NAND flash maker supplying exabyte-scale nearline capacity for AI training-data and checkpoint storage.",
+    "fact": "CEO said 2026 capacity is fully booked with long-term deals into 2027–2028 already signed; fiscal Q2 2026 revenue hit $3.02B, up 25% YoY.",
+    "src": "storage"
+  },
+  {
+    "id": "sandisk",
+    "name": "SanDisk",
+    "layer": "Fabrication & links",
+    "sub": "NAND flash · spun off 2024",
+    "desc": "NAND flash pure-play spun off from Western Digital in 2024, now a direct read on AI-driven flash-storage demand.",
+    "fact": "Shares more than tripled from the start of 2026 as AI buyers absorbed available NAND supply and flash pricing power improved.",
+    "src": "sandisk"
+  },
+  {
+    "id": "seagate",
+    "name": "Seagate",
+    "layer": "Fabrication & links",
+    "sub": "HDD · exabyte shipments",
+    "desc": "Hard-disk maker supplying high-capacity nearline drives for AI datasets and cold storage alongside Western Digital.",
+    "fact": "Industry-wide HDD exabyte shipments topped 450EB by late 2025 and stayed elevated through 2026, with Seagate and Western Digital at the center of the buildout.",
+    "src": "storage"
+  },
+  {
+    "id": "appliedmaterials",
+    "name": "Applied Materials",
+    "layer": "Fabrication & links",
+    "sub": "Wafer fab equipment",
+    "desc": "Largest supplier of semiconductor wafer-fabrication equipment, benefiting broadly from AI-driven capex across TSMC, Samsung and Micron.",
+    "fact": "Q2 FY2026 revenue reached $7.91B; shares were up roughly 98% YTD as of mid-August 2026 on AI-capex-driven wafer-fab-equipment demand.",
+    "src": "waferequip"
+  },
+  {
+    "id": "lamresearch",
+    "name": "Lam Research",
+    "layer": "Fabrication & links",
+    "sub": "Etch & deposition tools",
+    "desc": "Etch and deposition equipment maker critical to advanced-node and HBM production, riding the same AI capex wave as Applied Materials and KLA.",
+    "fact": "Q3 FY2026 revenue rose 23.8% YoY to $5.84B; shares were up roughly 89% YTD.",
+    "src": "waferequip"
+  },
+  {
+    "id": "kla",
+    "name": "KLA Corp",
+    "layer": "Fabrication & links",
+    "sub": "Process control",
+    "desc": "Process-control and inspection equipment maker; a yield bottleneck supplier as fabs push ever-more-complex AI chips.",
+    "fact": "Q3 FY2026 revenue rose 11.5% YoY to $3.42B; industry-wide wafer-fab-equipment spending was projected at $145–150B for 2026.",
+    "src": "waferequip"
+  },
+  {
+    "id": "arista",
+    "name": "Arista Networks",
+    "layer": "Systems & sites",
+    "sub": "AI cluster networking",
+    "desc": "Data-center Ethernet switch leader wiring GPU training clusters for hyperscalers; passed Cisco as the top data-center switch vendor in 2024.",
+    "fact": "Q1 2026 revenue reached $2.71B, up 35% YoY; raised its full-year AI-networking sales target to $3.5B — roughly double the prior year — with Microsoft and Meta each over 10% of revenue.",
+    "src": "arista"
   }
 ];
 
@@ -1390,6 +1453,62 @@ export const edges: MapEdge[] = [
     "label": "Dragonfly C1000 multi-generation data-center CPU roadmap",
     "cite": "Qualcomm / CNBC · Jun 24, 2026",
     "id": "e93"
+  },
+  {
+    "from": "wdc",
+    "to": "metadc",
+    "type": "supply",
+    "label": "Exabyte-scale HDD capacity for AI training data; 2026 sold out",
+    "cite": "24/7 Wall St. · May 16, 2026",
+    "id": "e94"
+  },
+  {
+    "from": "sandisk",
+    "to": "azure",
+    "type": "supply",
+    "label": "NAND flash for AI storage tiers",
+    "cite": "Sahm Capital · May 1, 2026",
+    "id": "e95"
+  },
+  {
+    "from": "seagate",
+    "to": "aws",
+    "type": "supply",
+    "label": "Nearline HDD capacity for AI datasets",
+    "cite": "24/7 Wall St. · May 16, 2026",
+    "id": "e96"
+  },
+  {
+    "from": "appliedmaterials",
+    "to": "tsmc",
+    "type": "supply",
+    "label": "Wafer fab equipment",
+    "cite": "24/7 Wall St. · Aug 18, 2026",
+    "id": "e97"
+  },
+  {
+    "from": "lamresearch",
+    "to": "micron",
+    "type": "supply",
+    "label": "Etch/deposition tools for HBM production",
+    "cite": "24/7 Wall St. · Aug 18, 2026",
+    "id": "e98"
+  },
+  {
+    "from": "kla",
+    "to": "skhynix",
+    "type": "supply",
+    "label": "Process control/inspection for HBM yield",
+    "cite": "24/7 Wall St. · Aug 18, 2026",
+    "id": "e99"
+  },
+  {
+    "from": "arista",
+    "to": "metadc",
+    "type": "supply",
+    "label": "AI cluster switching; Meta >10% of revenue",
+    "cite": "Fierce Network · 2026",
+    "id": "e100"
   }
 ];
 
@@ -1460,7 +1579,13 @@ export const columns: MapColumn[] = [
       "packaging",
       "eda",
       "optics",
-      "interconnect"
+      "interconnect",
+      "wdc",
+      "sandisk",
+      "seagate",
+      "appliedmaterials",
+      "lamresearch",
+      "kla"
     ]
   },
   {
@@ -1475,7 +1600,8 @@ export const columns: MapColumn[] = [
       "applieddigital",
       "crusoe",
       "cisco",
-      "hpe"
+      "hpe",
+      "arista"
     ]
   },
   {
@@ -1685,6 +1811,22 @@ export const sources: Record<string, SourceRef> = {
   "hpe": {
     "label": "The Motley Fool · Sep 12, 2026",
     "url": "https://www.fool.com/investing/2026/09/12/hpe-billion-ai-backlog-waiting-memory-supply/"
+  },
+  "storage": {
+    "label": "24/7 Wall St. · May 16, 2026",
+    "url": "https://247wallst.com/investing/2026/05/16/seagate-and-western-digital-ai-storage-demand-is-now-showing-up-in-pricing-power/"
+  },
+  "sandisk": {
+    "label": "Sahm Capital · May 1, 2026",
+    "url": "https://www.sahmcapital.com/news/content/sandisk-joins-western-digital-seagate-in-signaling-strong-ai-storage-demand-2026-05-01"
+  },
+  "waferequip": {
+    "label": "24/7 Wall St. · Aug 18, 2026",
+    "url": "https://247wallst.com/investing/2026/08/18/applied-materials-rockets-98-in-2026-how-does-amat-compare-to-lam-research-and-kla-as-ai-capex-powers-chip-gear-stocks/"
+  },
+  "arista": {
+    "label": "Fierce Network · 2026",
+    "url": "https://www.fierce-network.com/cloud/arista-rides-ai-past-cisco-now-nvidia-looms"
   }
 };
 

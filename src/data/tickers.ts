@@ -434,6 +434,55 @@ export const tickers: Record<string, TickerMeta[]> = {
       "exchange": "NYSE",
       "isUS": true
     }
+  ],
+  "wdc": [
+    {
+      "symbol": "WDC",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "sandisk": [
+    {
+      "symbol": "SNDK",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "seagate": [
+    {
+      "symbol": "STX",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "appliedmaterials": [
+    {
+      "symbol": "AMAT",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "lamresearch": [
+    {
+      "symbol": "LRCX",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "kla": [
+    {
+      "symbol": "KLAC",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "arista": [
+    {
+      "symbol": "ANET",
+      "exchange": "NYSE",
+      "isUS": true
+    }
   ]
 };
 
