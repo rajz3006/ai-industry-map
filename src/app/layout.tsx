@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const SITE_URL = "https://myaiprobe.vercel.app";
-const TITLE = "AI Industry Map — who pays whom, what breaks first";
+const TITLE = "The AI industry, mapped and priced";
 const DESCRIPTION =
   "A live dependency map of the AI industry: frontier labs, clouds, silicon, foundries, systems vendors and power — with live market data for every public ticker.";
 

@@ -93,7 +93,7 @@ export default function IndustryMap() {
             <span className="pulse" />
             Investigative map · live pricing via Finnhub
           </p>
-          <h1>Who pays whom — and what breaks first</h1>
+          <h1>The AI industry, mapped and priced</h1>
         </div>
         <p className="dek">
           The AI economy is not a neat stack. It is a web of <strong>capital, compute, chips and power</strong>{" "}
