@@ -1991,6 +1991,143 @@ table.mk-table {
 .chg.down {
   color: var(--risk);
 }
+.ec-wrap {
+  padding: 22px 0;
+}
+.ec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.ec-head h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.ec-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 620px;
+}
+.ec-status {
+  font: 500 10px "DM Mono", monospace;
+  color: var(--source);
+  white-space: nowrap;
+}
+.ec-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.ec-nav h3 {
+  margin: 0;
+  font-size: 16px;
+  min-width: 160px;
+}
+.ec-nav-btn,
+.ec-today-btn {
+  border: 1px solid var(--border-input);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+  font: 500 13px "DM Mono", monospace;
+  padding: 5px 11px;
+}
+.ec-nav-btn:hover,
+.ec-today-btn:hover {
+  border-color: var(--focus);
+}
+.ec-today-btn {
+  margin-left: auto;
+  font-size: 11px;
+}
+.ec-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.ec-weekday {
+  background: var(--panel);
+  text-align: center;
+  font: 500 10px "DM Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 6px 0;
+}
+.ec-cell {
+  background: var(--paper);
+  min-height: 84px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ec-cell.muted {
+  background: color-mix(in srgb, var(--paper) 60%, var(--panel));
+}
+.ec-cell.muted .ec-daynum {
+  color: var(--muted);
+  opacity: 0.5;
+}
+.ec-cell.today {
+  outline: 1px solid var(--focus);
+  outline-offset: -1px;
+}
+.ec-daynum {
+  font: 500 11px "DM Mono", monospace;
+  color: var(--ink);
+}
+.ec-cell.today .ec-daynum {
+  color: var(--focus);
+  font-weight: 700;
+}
+.ec-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  overflow-y: auto;
+  max-height: 66px;
+}
+.ec-chip {
+  border: 1px solid var(--border-input);
+  background: var(--panel);
+  color: var(--ink);
+  font: 600 9px "DM Mono", monospace;
+  padding: 2px 5px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.ec-chip:hover {
+  border-color: var(--focus);
+  color: var(--focus);
+}
+@media (max-width: 720px) {
+  .ec-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+  .ec-cell {
+    min-height: 60px;
+    padding: 4px;
+  }
+  .ec-weekday {
+    font-size: 8px;
+    padding: 4px 0;
+  }
+  .ec-chip {
+    font-size: 8px;
+    padding: 1px 3px;
+  }
+}
+
 .mv-signals-section {
   margin-bottom: 34px;
   padding-bottom: 30px;

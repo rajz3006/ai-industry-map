@@ -17,10 +17,11 @@ import MoneyLoops from "./MoneyLoops";
 import Fragility from "./Fragility";
 import MarketsTable from "./MarketsTable";
 import MoversTable from "./MoversTable";
+import EarningsCalendar from "./EarningsCalendar";
 import StockDetail from "./StockDetail";
 import AlertsPanel from "./AlertsPanel";
 
-type View = "network" | "loops" | "risks" | "markets" | "movers";
+type View = "network" | "loops" | "risks" | "markets" | "movers" | "calendar";
 
 const TABS: { view: View; label: string }[] = [
   { view: "network", label: "The Map" },
@@ -28,6 +29,7 @@ const TABS: { view: View; label: string }[] = [
   { view: "risks", label: "What breaks first" },
   { view: "markets", label: "Markets" },
   { view: "movers", label: "Daily movers" },
+  { view: "calendar", label: "Earnings calendar" },
 ];
 
 export default function IndustryMap() {
@@ -62,7 +64,7 @@ export default function IndustryMap() {
   useNowTick(10_000);
   // Earnings calendars move slowly: one shared batch fetch, refreshed every 6 hours,
   // powering the "E {date}" labels on nodes, mobile cards and the dossier.
-  const { earnings } = useEarnings(allUSSymbols);
+  const { earnings, loading: earningsLoading, lastUpdatedAt: earningsUpdatedAt } = useEarnings(allUSSymbols);
   // User-created, browser-local price alerts, evaluated against the shared quote poll.
   const alertApi = usePriceAlerts(quotes);
 
@@ -319,6 +321,17 @@ export default function IndustryMap() {
       <section className={`insight ${view === "movers" ? "active" : ""}`}>
         {view === "movers" && (
           <MoversTable earnings={earnings} onSelectNode={selectNode} onOpenStock={setStockSymbol} />
+        )}
+      </section>
+
+      <section className={`insight ${view === "calendar" ? "active" : ""}`}>
+        {view === "calendar" && (
+          <EarningsCalendar
+            earnings={earnings}
+            loading={earningsLoading}
+            lastUpdatedAt={earningsUpdatedAt}
+            onOpenStock={setStockSymbol}
+          />
         )}
       </section>
 
