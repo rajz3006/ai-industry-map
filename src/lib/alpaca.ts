@@ -29,6 +29,44 @@ export interface AlpacaBar {
   v: number;
 }
 
+/**
+ * Multi-symbol daily bars via Alpaca's /v2/stocks/bars endpoint — one request covers every
+ * symbol instead of looping per-ticker, which matters for a ~45-symbol, 6-month history pull.
+ */
+export async function alpacaGetMultiBars(
+  symbols: string[],
+  params: Record<string, string | number>
+): Promise<Record<string, AlpacaBar[]>> {
+  const creds = getAlpacaCreds();
+  if (!creds) {
+    throw new AlpacaError("ALPACA_API_KEY/ALPACA_SECRET_KEY are not configured on the server.");
+  }
+  const qs = new URLSearchParams({
+    ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
+    symbols: symbols.join(","),
+    feed: "iex",
+  });
+  const bySymbol: Record<string, AlpacaBar[]> = {};
+  let pageToken: string | undefined;
+  for (let page = 0; page < 20; page++) {
+    if (pageToken) qs.set("page_token", pageToken);
+    const res = await fetch(`${BASE_URL}/v2/stocks/bars?${qs.toString()}`, {
+      headers: { "APCA-API-KEY-ID": creds.key, "APCA-API-SECRET-KEY": creds.secret },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new AlpacaError(`Alpaca multi-bar request failed (${res.status})`, res.status);
+    }
+    const data = (await res.json()) as { bars?: Record<string, AlpacaBar[]>; next_page_token?: string | null };
+    for (const [sym, bars] of Object.entries(data.bars ?? {})) {
+      (bySymbol[sym] ??= []).push(...bars);
+    }
+    pageToken = data.next_page_token ?? undefined;
+    if (!pageToken) break;
+  }
+  return bySymbol;
+}
+
 export async function alpacaGetBars(
   symbol: string,
   params: Record<string, string | number>

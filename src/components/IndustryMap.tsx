@@ -16,16 +16,18 @@ import Dossier from "./Dossier";
 import MoneyLoops from "./MoneyLoops";
 import Fragility from "./Fragility";
 import MarketsTable from "./MarketsTable";
+import MoversTable from "./MoversTable";
 import StockDetail from "./StockDetail";
 import AlertsPanel from "./AlertsPanel";
 
-type View = "network" | "loops" | "risks" | "markets";
+type View = "network" | "loops" | "risks" | "markets" | "movers";
 
 const TABS: { view: View; label: string }[] = [
   { view: "network", label: "The Map" },
   { view: "loops", label: "Who pays whom" },
   { view: "risks", label: "What breaks first" },
   { view: "markets", label: "Markets" },
+  { view: "movers", label: "Daily movers" },
 ];
 
 export default function IndustryMap() {
@@ -312,6 +314,10 @@ export default function IndustryMap() {
             onOpenStock={setStockSymbol}
           />
         )}
+      </section>
+
+      <section className={`insight ${view === "movers" ? "active" : ""}`}>
+        {view === "movers" && <MoversTable onSelectNode={selectNode} onOpenStock={setStockSymbol} />}
       </section>
 
       <section className="method">
