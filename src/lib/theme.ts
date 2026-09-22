@@ -25,6 +25,35 @@ export const EDGE_COLORS: Record<Theme, Record<"supply" | "money" | "power" | "p
   },
 };
 
+/**
+ * Fixed per-layer colors for the Daily-movers category trend chart. Reuses the four edge
+ * colors above for the layers they read most naturally against, plus two new hues (blue,
+ * magenta) for the remaining layers — deliberately avoiding red/green since those are
+ * reserved for up/down semantics elsewhere on the same screen.
+ */
+export const CATEGORY_COLORS: Record<Theme, Record<string, string>> = {
+  dark: {
+    "Cloud & compute": "#33b0a0",
+    "Fabrication & links": "#d99a2e",
+    "Frontier labs": "#8c7ad6",
+    "Power & utilities": "#e0563a",
+    "Software & silicon": "#5b9be0",
+    "Systems & sites": "#d15fa0",
+  },
+  light: {
+    "Cloud & compute": "#0d8f7d",
+    "Fabrication & links": "#93630f",
+    "Frontier labs": "#5548b8",
+    "Power & utilities": "#b8285a",
+    "Software & silicon": "#1a5fb4",
+    "Systems & sites": "#a12f70",
+  },
+};
+export const CATEGORY_COLOR_FALLBACK: Record<Theme, string> = {
+  dark: "#a9ada8",
+  light: "#4f564f",
+};
+
 export const CHART_THEME: Record<
   Theme,
   { text: string; grid: string; border: string; up: string; down: string }
