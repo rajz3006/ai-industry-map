@@ -99,6 +99,7 @@ vercel
 vercel env add FINNHUB_API_KEY       # paste your key when prompted
 vercel env add ALPACA_API_KEY
 vercel env add ALPACA_SECRET_KEY
+vercel env add ALPHA_VANTAGE_API_KEY  # free key; powers Earnings playbook history
 vercel --prod
 ```
 
@@ -106,8 +107,9 @@ Option B — dashboard:
 
 1. Push this repo to GitHub.
 2. Import it at [vercel.com/new](https://vercel.com/new).
-3. In the project's Settings → Environment Variables, add `FINNHUB_API_KEY`, `ALPACA_API_KEY` and
-   `ALPACA_SECRET_KEY`.
+3. In the project's Settings → Environment Variables, add `FINNHUB_API_KEY`, `ALPACA_API_KEY`,
+   `ALPACA_SECRET_KEY`, and `ALPHA_VANTAGE_API_KEY` (free key; powers the Earnings
+   playbook's past-quarter history).
 4. Deploy.
 
 ## Scripts

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cacheGet, cacheSet, finnhubGet, getFinnhubKey } from "@/lib/finnhub";
 import { alpacaGetBars, getAlpacaCreds, type AlpacaBar } from "@/lib/alpaca";
+import { fetchEarningsHistory, getAlphaVantageKey } from "@/lib/alphavantage";
 import {
   atr,
   bollinger,
@@ -102,7 +103,6 @@ type FinnhubNewsItem = {
 };
 
 const RESEARCH_TTL_MS = 24 * 60 * 60 * 1000; // history barely moves; indicators ride along
-const HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
 const NEWS_TTL_MS = 30 * 60 * 1000; // matches /api/news cadence
 const MAX_QUARTERS = 8;
 const HISTORY_YEARS = 2.5;
@@ -110,8 +110,8 @@ const HISTORY_YEARS = 2.5;
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
 /**
- * Report timing caveat: Finnhub's calendar carries report dates but the free tier
- * does not reliably expose the before/after-market hour, and most US companies
+ * Report timing caveat: the history sources carry report dates but the free tiers
+ * do not reliably expose the before/after-market hour, and most US companies
  * report after the close. So the "reaction day" is defined as the first trading
  * session strictly AFTER the report date, indexed by trading days — never by
  * calendar days. T-1 is the last session before the reaction day, T-5 five
@@ -235,35 +235,77 @@ export async function GET(req: NextRequest) {
   let bars: DatedBar[] = [];
   let news: ResearchNewsItem[] = [];
 
-  // 1) Earnings history — full row list, cached separately so other consumers can reuse it.
-  const historyKey = `earnings-history:${symbol}`;
-  const cachedHistory = cacheGet<FinnhubEarningsRow[]>(historyKey);
+  // 1) Earnings history — past quarters come from Alpha Vantage, because Finnhub's
+  // free tier no longer returns historical /calendar/earnings rows (previous:null
+  // on every symbol). AV's EARNINGS endpoint has no revenue fields, so revenue
+  // actuals/estimates are always null here — noted once below. Finnhub is still
+  // used for the *next* earnings date in step 1b.
+  const avHistoryKey = `earnings-history-av:${symbol}`;
+  const AV_HISTORY_TTL_MS = 30 * 24 * 60 * 60 * 1000; // history changes quarterly; also keeps us well under AV's 25 req/day
+  const AV_NEGATIVE_TTL_MS = 60 * 60 * 1000; // never cache a failure longer than an hour
+  let nextDate: string | null = null;
+
+  const cachedHistory = cacheGet<FinnhubEarningsRow[]>(avHistoryKey);
   if (cachedHistory) {
     rows = cachedHistory;
+  } else if (getAlphaVantageKey()) {
+    try {
+      const av = await fetchEarningsHistory(symbol);
+      rows = av.map((q) => ({
+        date: q.date,
+        epsActual: q.epsActual,
+        epsEstimate: q.epsEstimate,
+        revenueActual: null,
+        revenueEstimate: null,
+        surprisePercent: q.surprisePercent,
+      }));
+      cacheSet(avHistoryKey, rows, AV_HISTORY_TTL_MS);
+      if (rows.length) {
+        unavailable.push(
+          "Revenue actuals/estimates are not provided by the free earnings-history source."
+        );
+      }
+    } catch (err) {
+      unavailable.push(
+        `Earnings history unavailable: ${err instanceof Error ? err.message : "unknown error"}`
+      );
+      cacheSet(avHistoryKey, [], AV_NEGATIVE_TTL_MS);
+    }
+  } else {
+    unavailable.push(
+      "Earnings history unavailable: earnings history needs a free Alpha Vantage key (ALPHA_VANTAGE_API_KEY not configured)."
+    );
+  }
+
+  // 1b) Next earnings date — Finnhub's calendar still serves future rows.
+  const nextKey = `earnings-next:${symbol}`;
+  const todayStr = fmt(new Date());
+  const cachedNext = cacheGet<string[]>(nextKey);
+  if (cachedNext) {
+    nextDate = cachedNext.find((d) => d > todayStr) ?? null;
   } else if (getFinnhubKey()) {
     try {
       const today = new Date();
-      const from = new Date(today);
-      from.setFullYear(from.getFullYear() - Math.ceil(HISTORY_YEARS));
       const to = new Date(today);
       to.setFullYear(to.getFullYear() + 1);
       const data = await finnhubGet<FinnhubEarningsCalendar>("/calendar/earnings", {
         symbol,
-        from: fmt(from),
+        from: fmt(today),
         to: fmt(to),
       });
-      rows = (data.earningsCalendar ?? [])
+      const dates = (data.earningsCalendar ?? [])
         .filter((r) => r && typeof r.date === "string")
-        .slice()
-        .sort((a, b) => (a.date < b.date ? -1 : 1));
-      cacheSet(historyKey, rows, HISTORY_TTL_MS);
+        .map((r) => r.date)
+        .sort();
+      cacheSet(nextKey, dates, 6 * 60 * 60 * 1000);
+      nextDate = dates.find((d) => d > todayStr) ?? null;
     } catch (err) {
       unavailable.push(
-        `Earnings calendar unavailable: ${err instanceof Error ? err.message : "unknown error"}`
+        `Next earnings date unavailable: ${err instanceof Error ? err.message : "unknown error"}`
       );
     }
   } else {
-    unavailable.push("Earnings calendar unavailable: FINNHUB_API_KEY is not configured.");
+    unavailable.push("Next earnings date unavailable: FINNHUB_API_KEY is not configured.");
   }
 
   // 2) Daily price bars (Alpaca — Finnhub's free tier no longer serves /stock/candle).
@@ -368,10 +410,9 @@ export async function GET(req: NextRequest) {
     unavailable.push("Swing-indicator snapshot unavailable: fewer than 60 daily bars.");
   }
 
-  const todayStr = fmt(new Date());
   const result: EarningsResearchResult = {
     symbol,
-    nextDate: rows.filter((r) => r.date > todayStr).map((r) => r.date)[0] ?? null,
+    nextDate,
     quarters,
     aggregates: aggregate(quarters),
     setup,
