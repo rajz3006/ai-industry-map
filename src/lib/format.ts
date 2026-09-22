@@ -56,6 +56,20 @@ export function formatPollLabel(ms: number): string {
   return `${minutes / 60}h`;
 }
 
+/** Human relative label for a client-side Date.now() timestamp, e.g. "just now", "2m ago". */
+export function formatRelativeTime(epochMs: number | null, nowMs: number = Date.now()): string {
+  if (!epochMs) return "never";
+  const deltaSec = Math.max(0, Math.round((nowMs - epochMs) / 1000));
+  if (deltaSec < 10) return "just now";
+  if (deltaSec < 60) return `${deltaSec}s ago`;
+  const minutes = Math.round(deltaSec / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
 export function formatTimestamp(unixSeconds: number | undefined | null): string {
   if (!unixSeconds) return "—";
   const d = new Date(unixSeconds * 1000);

@@ -2,62 +2,75 @@
 
 import { useEffect, useState } from "react";
 import type { QuoteResult } from "@/app/api/quote/route";
+import { fetchInChunks } from "@/lib/batchFetch";
 
 export type QuoteMap = Record<string, QuoteResult | { error: string } | undefined>;
 
+export interface QuoteProgress {
+  loaded: number;
+  total: number;
+}
+
+export interface UseQuotesResult {
+  quotes: QuoteMap;
+  loading: boolean;
+  /** How many of the currently-requested symbols have a result in this fetch cycle so far. */
+  progress: QuoteProgress;
+  /** When the last fetch cycle (all chunks) finished, or null before the first one completes. */
+  lastUpdatedAt: number | null;
+}
+
 /**
  * Polls /api/quote for the given US-listed symbols every `intervalMs` while `symbols` is
- * non-empty. Pass `intervalMs <= 0` to fetch once (on mount / when the symbol set changes)
- * without repeating. Symbols should be limited to what's currently visible — the caller is
- * responsible for keeping this list reasonably small relative to the provider's rate limit.
+ * non-empty, fetching in small chunks so results fill in progressively instead of one
+ * all-or-nothing request. Pass `intervalMs <= 0` to fetch once (on mount / when the symbol
+ * set changes) without repeating. Symbols should be limited to what's currently visible —
+ * the caller is responsible for keeping this list reasonably small relative to the
+ * provider's rate limit.
  */
-export function useQuotes(symbols: string[], intervalMs: number): { quotes: QuoteMap; loading: boolean } {
+export function useQuotes(symbols: string[], intervalMs: number): UseQuotesResult {
   const [quotes, setQuotes] = useState<QuoteMap>({});
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<QuoteProgress>({ loaded: 0, total: 0 });
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const key = symbols.slice().sort().join(",");
 
   useEffect(() => {
     if (!key) return;
     let cancelled = false;
+    const controller = new AbortController();
     const symbolList = key.split(",").filter(Boolean);
 
     async function fetchQuotes() {
       setLoading(true);
-      try {
-        const res = await fetch(`/api/quote?symbols=${encodeURIComponent(symbolList.join(","))}`);
-        if (!res.ok) throw new Error(`Quote request failed with status ${res.status}`);
-        const data = (await res.json()) as QuoteMap;
-        if (!cancelled) setQuotes((prev) => ({ ...prev, ...data }));
-      } catch {
-        // A failed fetch must not leave symbols stuck on "loading…" forever.
-        // Mark symbols we've never successfully loaded as errored so the UI
-        // can show "unavailable"; keep last-known values for the rest.
-        if (!cancelled) {
-          setQuotes((prev) => {
-            const next: QuoteMap = { ...prev };
-            for (const s of symbolList) {
-              if (!(s in next)) next[s] = { error: "Quote service unreachable" };
-            }
-            return next;
-          });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+      let loaded = 0;
+      setProgress({ loaded: 0, total: symbolList.length });
+      await fetchInChunks<QuoteMap>(
+        symbolList,
+        (chunk) => `/api/quote?symbols=${encodeURIComponent(chunk.join(","))}`,
+        (data, chunk) => {
+          if (cancelled) return;
+          loaded += chunk.length;
+          setQuotes((prev) => ({ ...prev, ...data }));
+          setProgress({ loaded, total: symbolList.length });
+        },
+        { signal: controller.signal }
+      );
+      if (!cancelled) {
+        setLoading(false);
+        setLastUpdatedAt(Date.now());
       }
     }
 
     fetchQuotes();
-    if (intervalMs > 0) {
-      const interval = setInterval(fetchQuotes, intervalMs);
-      return () => {
-        cancelled = true;
-        clearInterval(interval);
-      };
-    }
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (intervalMs > 0) interval = setInterval(fetchQuotes, intervalMs);
     return () => {
       cancelled = true;
+      controller.abort();
+      if (interval) clearInterval(interval);
     };
   }, [key, intervalMs]);
 
-  return { quotes, loading };
+  return { quotes, loading, progress, lastUpdatedAt };
 }

@@ -8,7 +8,8 @@ import { useEarnings } from "@/hooks/useEarnings";
 import { usePriceAlerts, describeAlert } from "@/hooks/usePriceAlerts";
 import { POLL_OPTIONS, usePollingInterval } from "@/hooks/usePollingInterval";
 import { useTheme } from "@/hooks/useTheme";
-import { formatPollLabel } from "@/lib/format";
+import { useNowTick } from "@/hooks/useNowTick";
+import { formatPollLabel, formatRelativeTime } from "@/lib/format";
 import NetworkGraph from "./NetworkGraph";
 import MobileMap from "./MobileMap";
 import Dossier from "./Dossier";
@@ -51,7 +52,12 @@ export default function IndustryMap() {
   // One shared poll covering every US-listed symbol in the map, used by the network graph,
   // dossier panel and Markets table alike — avoids duplicate polling loops and means every
   // node's ticker badge (not just the selected one) reflects a live change%.
-  const { quotes } = useQuotes(allUSSymbols, pollMs);
+  const { quotes, loading: quotesLoading, progress: quotesProgress, lastUpdatedAt } = useQuotes(
+    allUSSymbols,
+    pollMs
+  );
+  // Forces a re-render every ~10s purely so the "updated Xs/m ago" text below stays fresh.
+  useNowTick(10_000);
   // Earnings calendars move slowly: one shared batch fetch, refreshed every 6 hours,
   // powering the "E {date}" labels on nodes, mobile cards and the dossier.
   const { earnings } = useEarnings(allUSSymbols);
@@ -143,6 +149,16 @@ export default function IndustryMap() {
               ))}
             </select>
           </label>
+          <span className="quote-status" role="status">
+            {quotesLoading && quotesProgress.total > 0 ? (
+              <>
+                <span className="quote-status-dot" aria-hidden="true" />
+                Loading prices… {quotesProgress.loaded}/{quotesProgress.total}
+              </>
+            ) : (
+              <>Prices updated {formatRelativeTime(lastUpdatedAt)}</>
+            )}
+          </span>
           <button
             className="alerts-open"
             onClick={() => {
@@ -287,7 +303,14 @@ export default function IndustryMap() {
 
       <section className={`insight ${view === "markets" ? "active" : ""}`}>
         {view === "markets" && (
-          <MarketsTable quotes={quotes} pollMs={pollMs} onSelectNode={selectNode} onOpenStock={setStockSymbol} />
+          <MarketsTable
+            quotes={quotes}
+            pollMs={pollMs}
+            loading={quotesLoading}
+            lastUpdatedAt={lastUpdatedAt}
+            onSelectNode={selectNode}
+            onOpenStock={setStockSymbol}
+          />
         )}
       </section>
 

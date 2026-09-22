@@ -4,7 +4,15 @@ import { useMemo, useState } from "react";
 import { nodeById } from "@/data/industry-map";
 import { allTickerRows } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
-import { changeDirection, formatChangePercent, formatPollLabel, formatPrice, formatTimestamp } from "@/lib/format";
+import { useNowTick } from "@/hooks/useNowTick";
+import {
+  changeDirection,
+  formatChangePercent,
+  formatPollLabel,
+  formatPrice,
+  formatRelativeTime,
+  formatTimestamp,
+} from "@/lib/format";
 
 type SortKey = "name" | "layer" | "ticker" | "price" | "chgPct" | "range" | "asOf";
 
@@ -13,14 +21,19 @@ const ALL_CATEGORIES = "All";
 export default function MarketsTable({
   quotes,
   pollMs,
+  loading,
+  lastUpdatedAt,
   onSelectNode,
   onOpenStock,
 }: {
   quotes: QuoteMap;
   pollMs: number;
+  loading: boolean;
+  lastUpdatedAt: number | null;
   onSelectNode: (id: string) => void;
   onOpenStock: (symbol: string) => void;
 }) {
+  useNowTick(10_000); // keeps the "updated Xs/m ago" text below fresh
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "chgPct", dir: -1 });
   const [category, setCategory] = useState<string>(ALL_CATEGORIES);
 
@@ -126,7 +139,11 @@ export default function MarketsTable({
             Crusoe, and others) have no market price and are omitted. Click a row to open its detail view.
           </p>
         </div>
-        <span className="mk-refresh">Live via Finnhub · refreshed every {formatPollLabel(pollMs)} (US-listed only)</span>
+        <span className="mk-refresh">
+          Live via Finnhub (US-listed only) · {loading ? "updating…" : `updated ${formatRelativeTime(lastUpdatedAt)}`}
+          {" · refreshes every "}
+          {formatPollLabel(pollMs)}
+        </span>
       </div>
       <div className="mk-categories" role="tablist" aria-label="Filter by category">
         {categories.map((c) => (

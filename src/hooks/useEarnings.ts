@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { EarningsMap } from "@/app/api/earnings/route";
+import { fetchInChunks } from "@/lib/batchFetch";
 
 export const EARNINGS_REFRESH_MS = 6 * 60 * 60 * 1000; // calendars move slowly
 // Earnings data is slow-changing and not time-critical, unlike price quotes. Delaying the
@@ -18,34 +19,28 @@ const INITIAL_FETCH_DELAY_MS = 15_000;
 export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFRESH_MS) {
   const [earnings, setEarnings] = useState<EarningsMap>({});
   const [loading, setLoading] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const key = symbols.slice().sort().join(",");
 
   useEffect(() => {
     if (!key) return;
     let cancelled = false;
+    const controller = new AbortController();
     const symbolList = key.split(",").filter(Boolean);
 
     async function fetchEarnings() {
       setLoading(true);
-      try {
-        const res = await fetch(`/api/earnings?symbols=${encodeURIComponent(symbolList.join(","))}`);
-        if (!res.ok) throw new Error(`Earnings request failed with status ${res.status}`);
-        const data = (await res.json()) as EarningsMap;
-        if (!cancelled) setEarnings((prev) => ({ ...prev, ...data }));
-      } catch {
-        // Mark never-loaded symbols as errored so the UI can show "unavailable"
-        // instead of hanging; keep last-known values for the rest.
-        if (!cancelled) {
-          setEarnings((prev) => {
-            const next: EarningsMap = { ...prev };
-            for (const s of symbolList) {
-              if (!(s in next)) next[s] = { error: "Earnings service unreachable" };
-            }
-            return next;
-          });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+      await fetchInChunks<EarningsMap>(
+        symbolList,
+        (chunk) => `/api/earnings?symbols=${encodeURIComponent(chunk.join(","))}`,
+        (data) => {
+          if (!cancelled) setEarnings((prev) => ({ ...prev, ...data }));
+        },
+        { signal: controller.signal }
+      );
+      if (!cancelled) {
+        setLoading(false);
+        setLastUpdatedAt(Date.now());
       }
     }
 
@@ -56,12 +51,13 @@ export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFR
     }
     return () => {
       cancelled = true;
+      controller.abort();
       clearTimeout(initialTimer);
       if (interval) clearInterval(interval);
     };
   }, [key, refreshMs]);
 
-  return { earnings, loading };
+  return { earnings, loading, lastUpdatedAt };
 }
 
 /** Returns the next upcoming earnings date (YYYY-MM-DD) for a node's primary US ticker, if known. */
