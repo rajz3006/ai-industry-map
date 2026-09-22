@@ -6,6 +6,7 @@ import type { ProfileResult } from "@/app/api/profile/route";
 import type { CandlesResult, Range } from "@/app/api/candles/route";
 import type { EarningsResult } from "@/app/api/earnings/route";
 import type { QuoteResult } from "@/app/api/quote/route";
+import EarningsResearch from "@/components/EarningsResearch";
 import { computeTechnicals, SIGNAL_COPY } from "@/lib/technicals";
 import { formatChangeAbs, formatChangePercent, formatDate, formatMarketCap, formatPrice, formatTimestamp } from "@/lib/format";
 import { useTheme } from "@/hooks/useTheme";
@@ -236,6 +237,9 @@ export default function StockDetail({
                   <span>No upcoming date on the calendar yet.</span>
                 )}
               </div>
+              {earnings.data?.next && earnings.data.next.date <= "2026-12-31" && (
+                <EarningsResearch symbol={symbol} nextDate={earnings.data.next.date} />
+              )}
             </>
           )}
         </div>

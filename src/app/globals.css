@@ -1258,6 +1258,153 @@ table.mk-table {
   border-radius: 10px;
   padding: 1px 8px;
 }
+/* Earnings playbook block (StockDetail → EarningsResearch). */
+.pb-wrap {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+.pb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px 0;
+  font: 500 11px "DM Mono", monospace;
+  color: var(--money);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+.pb-toggle:hover {
+  color: var(--ink);
+}
+.pb-caret {
+  font-size: 12px;
+}
+.pb-body {
+  padding-bottom: 8px;
+}
+.pb-verdict {
+  font-size: 13px;
+  color: var(--ink);
+  margin: 4px 0 12px;
+  line-height: 1.5;
+}
+.pb-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.pb-tile {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.pb-tile b {
+  display: block;
+  font: 500 9px "DM Mono", monospace;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.pb-tile span {
+  font-size: 15px;
+  color: var(--ink);
+}
+.pb-tile em {
+  display: block;
+  font: 400 9px "DM Mono", monospace;
+  font-style: normal;
+  color: var(--dim);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.pb-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 14px;
+}
+.pb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.pb-table th {
+  font: 500 9px "DM Mono", monospace;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.pb-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: #c6cdc8;
+  white-space: nowrap;
+}
+.pb-up {
+  color: #74c69d;
+}
+.pb-down {
+  color: #ff725e;
+}
+.pb-beat {
+  color: #74c69d;
+}
+.pb-miss {
+  color: #ff725e;
+}
+.pb-setup h4,
+.pb-news h4 {
+  font-size: 12px;
+  margin: 0 0 10px;
+  color: #aeb5b0;
+}
+.pb-setup {
+  margin-bottom: 14px;
+}
+.pb-gaps {
+  font-size: 12px;
+  color: #c6cdc8;
+  margin: 10px 0 0;
+}
+.pb-gap {
+  display: inline-block;
+  margin-right: 10px;
+  color: var(--money);
+}
+.pb-asof {
+  font: 400 10px "DM Mono", monospace;
+  color: var(--dim);
+  margin: 8px 0 0;
+}
+.pb-news {
+  margin-bottom: 10px;
+}
+.pb-missing {
+  list-style: disc;
+  margin: 0 0 10px 16px;
+  padding: 0;
+  font: 400 11px "DM Mono", monospace;
+  color: var(--dim);
+}
+.pb-missing li {
+  margin-bottom: 3px;
+}
+.pb-disclaimer {
+  font: 400 10px "DM Mono", monospace;
+  color: var(--dim);
+  margin: 6px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
 /* Technical signals block (StockDetail). */
 .tech-block {
   margin-top: 22px;
