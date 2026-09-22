@@ -232,42 +232,6 @@ h1 {
   margin-right: 8px;
   box-shadow: 0 0 0 4px var(--pulse-glow);
 }
-.metrics-cap {
-  font: 500 10px "DM Mono", monospace;
-  color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin: 0;
-  padding: 20px 0 12px;
-}
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid var(--line);
-}
-.metric {
-  padding: 22px 20px 20px;
-  border-right: 1px solid var(--line);
-}
-.metric:first-child {
-  padding-left: 0;
-}
-.metric:last-child {
-  border-right: 0;
-}
-.metric b {
-  display: block;
-  font-size: clamp(24px, 3vw, 42px);
-  line-height: 1;
-  color: var(--ink);
-  letter-spacing: -0.04em;
-  margin-bottom: 7px;
-  font-variant-numeric: tabular-nums;
-}
-.metric span {
-  font: 400 11px/1.4 "DM Mono", monospace;
-  color: var(--muted);
-}
 .map-side {
   display: flex;
   flex-direction: column;
@@ -364,6 +328,32 @@ h1 {
 .tab.active {
   background: var(--ink);
   color: var(--on-ink);
+}
+.subtabs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.subtab {
+  border: 1px solid var(--border-input);
+  background: var(--panel);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  font: 500 12px "DM Mono", monospace;
+}
+.subtab:hover,
+.subtab:focus-visible {
+  color: var(--ink);
+  border-color: var(--focus);
+}
+.subtab.active {
+  background: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
 }
 .search {
   position: relative;
@@ -1711,18 +1701,6 @@ table.mk-table {
   }
   .dek {
     font-size: 15px;
-  }
-  .metrics {
-    grid-template-columns: 1fr 1fr;
-  }
-  .metric:nth-child(2) {
-    border-right: 0;
-  }
-  .metric:nth-child(n + 3) {
-    border-top: 1px solid var(--line);
-  }
-  .metric:nth-child(3) {
-    padding-left: 0;
   }
   .toolbar {
     margin: 0 -18px;

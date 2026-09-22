@@ -23,13 +23,25 @@ import AlertsPanel from "./AlertsPanel";
 
 type View = "network" | "loops" | "risks" | "markets" | "movers" | "calendar";
 
-const TABS: { view: View; label: string }[] = [
-  { view: "network", label: "The Map" },
+// "Who pays whom" and "What breaks first" live under one "AI Overview" top-level tab as
+// sub-tabs, rather than each taking a top-level slot next to Markets/Movers/Calendar.
+const OVERVIEW_VIEWS: View[] = ["loops", "risks"];
+const OVERVIEW_DEFAULT: View = "loops";
+const OVERVIEW_SUBTABS: { view: View; label: string }[] = [
   { view: "loops", label: "Who pays whom" },
   { view: "risks", label: "What breaks first" },
-  { view: "markets", label: "Markets" },
-  { view: "movers", label: "Daily movers" },
-  { view: "calendar", label: "Earnings calendar" },
+];
+
+type TabDef =
+  | { kind: "single"; view: View; label: string }
+  | { kind: "group"; label: string; views: View[]; defaultView: View };
+
+const TABS: TabDef[] = [
+  { kind: "single", view: "network", label: "The Map" },
+  { kind: "group", label: "AI Overview", views: OVERVIEW_VIEWS, defaultView: OVERVIEW_DEFAULT },
+  { kind: "single", view: "markets", label: "Markets" },
+  { kind: "single", view: "movers", label: "Daily movers" },
+  { kind: "single", view: "calendar", label: "Earnings calendar" },
 ];
 
 export default function IndustryMap() {
@@ -85,59 +97,34 @@ export default function IndustryMap() {
         </div>
         <p className="dek">
           The AI economy is not a neat stack. It is a web of <strong>capital, compute, chips and power</strong>{" "}
-          concentrated in a few hands. <strong>Who pays whom</strong> follows the money;{" "}
-          <strong>What breaks first</strong> stress-tests the breaking points.
+          concentrated in a few hands. <strong>AI Overview</strong> traces who pays whom and what breaks first;{" "}
+          <strong>Markets</strong>, <strong>Daily movers</strong> and the <strong>Earnings calendar</strong> track
+          how that concentration is pricing in real time.
         </p>
-      </section>
-
-      <p className="metrics-cap">Concentration snapshot · September 2026</p>
-      <section className="metrics" aria-label="Key concentration metrics">
-        <div className="metric">
-          <b>~$0.9T</b>
-          <span>
-            UBS-implied 2026 AI capex
-            <br />
-            (from $1.2T in 2027, +33%)
-          </span>
-        </div>
-        <div className="metric">
-          <b>73%</b>
-          <span>
-            TSMC share of global foundry
-            <br />
-            &gt;90% advanced logic (widely cited)
-          </span>
-        </div>
-        <div className="metric">
-          <b>~50%</b>
-          <span>
-            SK Hynix projected 2026
-            <br />
-            share of HBM
-          </span>
-        </div>
-        <div className="metric">
-          <b>94%</b>
-          <span>
-            ASML estimated share of
-            <br />
-            global lithography
-          </span>
-        </div>
       </section>
 
       <nav className="toolbar" aria-label="Map view controls">
         <div className="toolbar-left">
           <div className="tabs">
-            {TABS.map((t) => (
-              <button
-                key={t.view}
-                className={`tab ${view === t.view ? "active" : ""}`}
-                onClick={() => setView(t.view)}
-              >
-                {t.label}
-              </button>
-            ))}
+            {TABS.map((t) =>
+              t.kind === "single" ? (
+                <button
+                  key={t.view}
+                  className={`tab ${view === t.view ? "active" : ""}`}
+                  onClick={() => setView(t.view)}
+                >
+                  {t.label}
+                </button>
+              ) : (
+                <button
+                  key={t.label}
+                  className={`tab ${t.views.includes(view) ? "active" : ""}`}
+                  onClick={() => setView(t.views.includes(view) ? view : t.defaultView)}
+                >
+                  {t.label}
+                </button>
+              )
+            )}
           </div>
           <label className="poll-select">
             <span className="sr-only">Live price refresh interval</span>
@@ -297,12 +284,22 @@ export default function IndustryMap() {
         </div>
       </section>
 
-      <section className={`insight ${view === "loops" ? "active" : ""}`}>
-        <MoneyLoops />
-      </section>
-
-      <section className={`insight ${view === "risks" ? "active" : ""}`}>
-        <Fragility onSelectNode={selectNode} />
+      <section className={`insight ${OVERVIEW_VIEWS.includes(view) ? "active" : ""}`}>
+        <div className="subtabs" role="tablist" aria-label="AI Overview sections">
+          {OVERVIEW_SUBTABS.map((t) => (
+            <button
+              key={t.view}
+              role="tab"
+              aria-selected={view === t.view}
+              className={`subtab ${view === t.view ? "active" : ""}`}
+              onClick={() => setView(t.view)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {view === "loops" && <MoneyLoops />}
+        {view === "risks" && <Fragility onSelectNode={selectNode} />}
       </section>
 
       <section className={`insight ${view === "markets" ? "active" : ""}`}>
