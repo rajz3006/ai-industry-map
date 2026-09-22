@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { useMovers } from "@/hooks/useMovers";
 import { useMoversTrend } from "@/hooks/useMoversTrend";
 import type { Period } from "@/app/api/movers/trend/route";
+import type { EarningsMap } from "@/app/api/earnings/route";
 import CategoryTrendChart from "./CategoryTrendChart";
+import SignalsPanel from "./SignalsPanel";
 import { changeDirection, formatChangePercent, formatPrice } from "@/lib/format";
 
 const TOP_N = 10;
@@ -25,9 +27,11 @@ function fmtShortDate(iso: string): string {
 }
 
 export default function MoversTable({
+  earnings,
   onSelectNode,
   onOpenStock,
 }: {
+  earnings: EarningsMap;
   onSelectNode: (id: string) => void;
   onOpenStock: (symbol: string) => void;
 }) {
@@ -70,6 +74,8 @@ export default function MoversTable({
           </p>
         </div>
       </div>
+
+      <SignalsPanel earnings={earnings} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
 
       {/* --- Trend section: leaders/laggards + segment trend over a trailing period --- */}
       <section className="mv-trend-section">

@@ -317,7 +317,9 @@ export default function IndustryMap() {
       </section>
 
       <section className={`insight ${view === "movers" ? "active" : ""}`}>
-        {view === "movers" && <MoversTable onSelectNode={selectNode} onOpenStock={setStockSymbol} />}
+        {view === "movers" && (
+          <MoversTable earnings={earnings} onSelectNode={selectNode} onOpenStock={setStockSymbol} />
+        )}
       </section>
 
       <section className="method">

@@ -1991,6 +1991,112 @@ table.mk-table {
 .chg.down {
   color: var(--risk);
 }
+.mv-signals-section {
+  margin-bottom: 34px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--line);
+}
+.mv-signals-note {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 640px;
+}
+.mv-momentum-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+}
+.mv-momentum-row {
+  display: grid;
+  grid-template-columns: 150px 130px 60px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--row-border);
+}
+.mv-momentum-tag {
+  font: 500 10px "DM Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.mv-momentum-tag.up {
+  color: var(--green);
+}
+.mv-momentum-tag.down {
+  color: var(--risk);
+}
+.mv-momentum-prior {
+  color: var(--muted);
+  font: 400 10px "DM Mono", monospace;
+}
+.mv-signal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mv-signal-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--row-border);
+}
+.mv-signal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mv-signal-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.mv-earnings-badge {
+  font: 500 10px "DM Mono", monospace;
+  color: var(--source);
+  border: 1px solid var(--border-input);
+  border-radius: 2px;
+  padding: 2px 7px;
+}
+.mv-news-toggle {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--focus);
+  font: 500 11px "DM Mono", monospace;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.mv-news-list {
+  margin-top: 8px;
+}
+.mv-news-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.mv-news-list a {
+  color: var(--ink);
+  font-size: 12px;
+}
+.mv-news-source {
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 720px) {
+  .mv-momentum-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
 .mv-trend-section {
   margin-bottom: 34px;
   padding-bottom: 30px;
