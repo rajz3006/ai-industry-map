@@ -1,32 +1,72 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { EarningsMap } from "@/app/api/earnings/route";
 import { fetchInChunks } from "@/lib/batchFetch";
-
-export interface EarningsSeed {
-  earnings: EarningsMap;
-  lastUpdatedAt: number;
-}
 
 export const EARNINGS_REFRESH_MS = 6 * 60 * 60 * 1000; // calendars move slowly
 // Earnings data is slow-changing and not time-critical, unlike price quotes. Delaying the
 // first fetch keeps it from competing with the quote batch for the shared Finnhub rate-limit
-// budget on a cold page load — both hooks fire on mount, and a combined ~90-symbol burst
-// (45 quotes + 45 earnings) can exceed the free-tier 60/min cap and queue for a while.
+// budget on a cold page load — both hooks fire on mount, and a combined ~100+-symbol burst
+// can exceed the free-tier 60/min cap and queue for a while.
 const INITIAL_FETCH_DELAY_MS = 15_000;
+
+const CACHE_KEY = "aimap:earnings-cache:v1";
+// Earnings dates barely move; a cached snapshot up to a day old is still a reasonable thing
+// to show immediately while the delayed live fetch (see above) brings it current.
+const CACHE_MAX_AGE_MS = 24 * 60 * 60_000;
+
+interface CachePayload {
+  earnings: EarningsMap;
+  at: number;
+}
+
+function readCache(): CachePayload | null {
+  try {
+    const raw = window.localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CachePayload>;
+    if (!parsed || typeof parsed.at !== "number" || !parsed.earnings) return null;
+    if (Date.now() - parsed.at > CACHE_MAX_AGE_MS) return null;
+    return parsed as CachePayload;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(earnings: EarningsMap, at: number): void {
+  try {
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify({ earnings, at }));
+  } catch {
+    // Storage full or unavailable (private browsing, etc.) — not worth surfacing.
+  }
+}
 
 /**
  * Fetches next/previous earnings dates for a batch of symbols via
  * /api/earnings?symbols=A,B,C and refreshes every `refreshMs` (default 6h).
  * Unlike quotes, this is intentionally low-frequency.
+ *
+ * The last successful fetch from this browser is cached in localStorage and seeds state
+ * right after mount, so a reload doesn't sit blank for the initial 15s delay above — the
+ * delayed live fetch still always runs and brings it current in the background.
  */
-export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFRESH_MS, seed?: EarningsSeed) {
-  const [earnings, setEarnings] = useState<EarningsMap>(() => seed?.earnings ?? {});
+export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFRESH_MS) {
+  const [earnings, setEarnings] = useState<EarningsMap>({});
   const [loading, setLoading] = useState(false);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(() => seed?.lastUpdatedAt ?? null);
-  const seedConsumed = useRef(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
   const key = symbols.slice().sort().join(",");
+
+  // Runs once, right after hydration — see the matching effect in useQuotes for why this
+  // can't happen during render.
+  useEffect(() => {
+    const cached = readCache();
+    if (cached) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot cache seed on mount
+      setEarnings(cached.earnings);
+      setLastUpdatedAt(cached.at);
+    }
+  }, []);
 
   useEffect(() => {
     if (!key) return;
@@ -36,26 +76,26 @@ export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFR
 
     async function fetchEarnings() {
       setLoading(true);
+      const merged: EarningsMap = {};
       await fetchInChunks<EarningsMap>(
         symbolList,
         (chunk) => `/api/earnings?symbols=${encodeURIComponent(chunk.join(","))}`,
         (data) => {
-          if (!cancelled) setEarnings((prev) => ({ ...prev, ...data }));
+          if (cancelled) return;
+          Object.assign(merged, data);
+          setEarnings((prev) => ({ ...prev, ...data }));
         },
         { signal: controller.signal }
       );
       if (!cancelled) {
         setLoading(false);
-        setLastUpdatedAt(Date.now());
+        const now = Date.now();
+        setLastUpdatedAt(now);
+        writeCache(merged, now);
       }
     }
 
-    let initialTimer: ReturnType<typeof setTimeout> | undefined;
-    if (seed && !seedConsumed.current) {
-      seedConsumed.current = true;
-    } else {
-      initialTimer = setTimeout(fetchEarnings, INITIAL_FETCH_DELAY_MS);
-    }
+    const initialTimer = setTimeout(fetchEarnings, INITIAL_FETCH_DELAY_MS);
     let interval: ReturnType<typeof setInterval> | undefined;
     if (refreshMs > 0) {
       interval = setInterval(fetchEarnings, refreshMs + INITIAL_FETCH_DELAY_MS);
@@ -63,12 +103,10 @@ export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFR
     return () => {
       cancelled = true;
       controller.abort();
-      if (initialTimer) clearTimeout(initialTimer);
+      clearTimeout(initialTimer);
       if (interval) clearInterval(interval);
     };
-    // `seed` is only ever consumed once (via seedConsumed.current); including it here is
-    // safe (its identity is stable for the component's lifetime) and satisfies exhaustive-deps.
-  }, [key, refreshMs, seed]);
+  }, [key, refreshMs]);
 
   return { earnings, loading, lastUpdatedAt };
 }
