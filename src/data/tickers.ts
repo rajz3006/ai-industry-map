@@ -483,6 +483,65 @@ export const tickers: Record<string, TickerMeta[]> = {
       "exchange": "NYSE",
       "isUS": true
     }
+  ],
+  "bloomenergy": [
+    {
+      "symbol": "BE",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "iren": [
+    {
+      "symbol": "IREN",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "aep": [
+    {
+      "symbol": "AEP",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "ciphermining": [
+    {
+      "symbol": "CIFR",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "zhipuai": [
+    {
+      "symbol": "2513.HK",
+      "exchange": "Hong Kong (HKEX)",
+      "isUS": false,
+      "note": "Foreign-listed in HKD — check a Hong Kong exchange source"
+    }
+  ],
+  "tokyoelectron": [
+    {
+      "symbol": "8035.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "coherentcorp": [
+    {
+      "symbol": "COHR",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "lenovo": [
+    {
+      "symbol": "0992.HK",
+      "exchange": "Hong Kong (HKEX)",
+      "isUS": false,
+      "note": "Foreign-listed in HKD — check a Hong Kong exchange source"
+    }
   ]
 };
 

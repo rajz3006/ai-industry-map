@@ -698,6 +698,141 @@ export const nodes: MapNode[] = [
     "desc": "Data-center Ethernet switch leader wiring GPU training clusters for hyperscalers; passed Cisco as the top data-center switch vendor in 2024.",
     "fact": "Q1 2026 revenue reached $2.71B, up 35% YoY; raised its full-year AI-networking sales target to $3.5B — roughly double the prior year — with Microsoft and Meta each over 10% of revenue.",
     "src": "arista"
+  },
+  {
+    "id": "huawei",
+    "name": "Huawei / HiSilicon",
+    "layer": "Software & silicon",
+    "sub": "Ascend · ~50% China AI chip share",
+    "desc": "Huawei's HiSilicon Ascend line became the default AI accelerator in China after Nvidia's China share collapsed under export controls; the Ascend 950PR entered mass production in March 2026 on SMIC's N+3 (5nm-class) node.",
+    "fact": "Huawei projects AI chip revenue up roughly 60% to about $12B in 2026, with Ascend holding an estimated 50-60% of China's AI accelerator market versus Nvidia's near-zero share.",
+    "src": "huaweiAscend"
+  },
+  {
+    "id": "bloomenergy",
+    "name": "Bloom Energy",
+    "layer": "Power & utilities",
+    "sub": "Fuel cells · Oracle, AEP, CoreWeave",
+    "desc": "Solid-oxide fuel cell maker supplying on-site power that bypasses grid interconnection queues for AI data centers; CoreWeave was its first AI-sector customer, and Oracle and AEP are now anchor buyers.",
+    "fact": "Oracle's master services agreement covers up to 2.8GW of Bloom SOFC systems (expanded Apr 2026); Brookfield's project-financing partnership with Bloom scaled to $25B.",
+    "src": "bloomOracle"
+  },
+  {
+    "id": "iren",
+    "name": "IREN",
+    "layer": "Cloud & compute",
+    "sub": "Neocloud · ex-bitcoin miner",
+    "desc": "Public neocloud that converted bitcoin-mining infrastructure into GPU cloud capacity; signed a five-year, roughly $9.7B GPU cloud services agreement with Microsoft in 2026.",
+    "fact": "Nvidia holds a five-year right to invest up to about $2.1B in IREN via warrants (30M shares at $70) tied to a separate $3.4B GPU cloud services deal.",
+    "src": "irenMicrosoft"
+  },
+  {
+    "id": "aep",
+    "name": "American Electric Power",
+    "layer": "Power & utilities",
+    "sub": "Utility · Bloom Energy counterparty",
+    "desc": "One of the largest US electric utilities, facing data-center-driven load growth across its territory; signed a landmark fuel-cell offtake agreement with Bloom Energy in January 2026.",
+    "fact": "AEP's 20-year offtake agreement with Bloom Energy covers up to 1GW of fuel cells for a total contract value of about $2.65B, backing a planned 900MW Wyoming facility.",
+    "src": "bloomAEP"
+  },
+  {
+    "id": "lambdaai",
+    "name": "Lambda",
+    "layer": "Cloud & compute",
+    "sub": "Nvidia-backed neocloud",
+    "desc": "GPU cloud provider renting Nvidia accelerators to AI labs and enterprises, competing with hyperscalers on price and specialist neoclouds on availability; backed by Nvidia, ARK Invest and Andrej Karpathy among others.",
+    "fact": "In talks as of August 2026 to raise up to $3B in a pre-IPO round at a valuation of $12B or more, after separately borrowing about $917M ring-fenced for GPU purchases.",
+    "src": "lambdaFunding"
+  },
+  {
+    "id": "nscale",
+    "name": "Nscale",
+    "layer": "Cloud & compute",
+    "sub": "UK neocloud · filed for NYSE IPO",
+    "desc": "UK-based neocloud that converted from crypto-mining infrastructure to GPU hosting; Nvidia is a preferred shareholder and guarantees a large share of its data-center lease obligations, and Microsoft is its anchor tenant.",
+    "fact": "Nvidia bought $60M of Nscale warrants and guaranteed up to $860.3M of Nscale's lease obligations for a 240MW Ward County, Texas data center; Nscale filed for a US IPO in Sep 2026 targeting up to a $35B valuation.",
+    "src": "nscaleNvidia"
+  },
+  {
+    "id": "ciphermining",
+    "name": "Cipher Mining",
+    "layer": "Systems & sites",
+    "sub": "CIFR · bitcoin miner turned GPU host",
+    "desc": "Former bitcoin miner converting sites to GPU hosting for AI workloads; Google is guaranteeing a large share of its 10-year hosting contract with AI cloud startup Fluidstack.",
+    "fact": "Google agreed to guarantee $1.4B of Fluidstack's $3B, 10-year lease with Cipher covering 168MW at its Barber Lake, Texas site, in exchange for warrants on roughly 5.4% of Cipher's equity.",
+    "src": "cipherGoogle"
+  },
+  {
+    "id": "perplexity",
+    "name": "Perplexity AI",
+    "layer": "Frontier labs",
+    "sub": "AI search & agents",
+    "desc": "AI-native search and agent company (Perplexity Computer) backed by Nvidia, Jeff Bezos and SoftBank Vision Fund 2; committed to running AI agent workloads on Nvidia's Vera CPUs.",
+    "fact": "Annualized revenue rose to over $750M by August 2026 from about $232M at the end of 2025; Nvidia was reportedly in talks to invest at a valuation above $30B.",
+    "src": "perplexityNvidia"
+  },
+  {
+    "id": "ssi",
+    "name": "Safe Superintelligence",
+    "layer": "Frontier labs",
+    "sub": "Ilya Sutskever · pre-product",
+    "desc": "Frontier AI lab founded by ex-OpenAI chief scientist Ilya Sutskever, focused solely on safe superintelligence research with no shipped product; Nvidia is both an investor and a compute partner via the Vera Rubin platform.",
+    "fact": "Raised $5B in July 2026 (on top of $1B in 2024 and $2B in 2025, ~$8B total) from Nvidia, Greenoaks, a16z, Sequoia, DST Global and Alphabet; last disclosed valuation was $32B.",
+    "src": "ssiSource"
+  },
+  {
+    "id": "thinkingmachines",
+    "name": "Thinking Machines Lab",
+    "layer": "Frontier labs",
+    "sub": "Mira Murati · ex-OpenAI CTO",
+    "desc": "Frontier AI lab founded by former OpenAI CTO Mira Murati, staffed heavily with former OpenAI researchers.",
+    "fact": "Closed a $2B seed in July 2025 followed by a $5B Series B at a $50B valuation in March 2026.",
+    "src": "tmlSource"
+  },
+  {
+    "id": "moonshotai",
+    "name": "Moonshot AI",
+    "layer": "Frontier labs",
+    "sub": "Kimi · China",
+    "desc": "Chinese frontier lab behind the Kimi model family, competing with DeepSeek, Alibaba's Qwen and ByteDance's Doubao; became China's best-funded LLM startup in 2026.",
+    "fact": "Closed a $2B round at a $20B valuation in May 2026 (led by Meituan's Long-Z Investments) and was in talks to raise further at up to a $50B pre-money valuation ahead of a possible IPO.",
+    "src": "moonshotSource"
+  },
+  {
+    "id": "zhipuai",
+    "name": "Zhipu AI (Z.ai)",
+    "layer": "Frontier labs",
+    "sub": "2513.HK · first Chinese AI IPO",
+    "desc": "Chinese frontier lab behind the GLM model family; became the first major Chinese generative-AI startup to go public, listing on the Hong Kong Stock Exchange in January 2026.",
+    "fact": "IPO raised about $558M on Jan 8, 2026, opening at HK$120/share with an initial market cap of roughly HK$52.8B (~$6.8B).",
+    "src": "zhipuSource"
+  },
+  {
+    "id": "tokyoelectron",
+    "name": "Tokyo Electron",
+    "layer": "Fabrication & links",
+    "sub": "8035.T · wafer fab equipment",
+    "desc": "Japanese semiconductor equipment maker alongside Applied Materials, Lam Research and KLA in the tools layer beneath the foundries; its top five customers (TSMC, Samsung, Intel, SK hynix, Micron) are all expanding capacity for AI chips.",
+    "fact": "Equipment for advanced chips rose to nearly 40% of fiscal 2026 sales; first-half FY2027 guidance of ¥1.57T implies about 33% YoY growth on AI-driven demand.",
+    "src": "tokyoElectronAI"
+  },
+  {
+    "id": "coherentcorp",
+    "name": "Coherent Corp",
+    "layer": "Fabrication & links",
+    "sub": "COHR · optical transceivers",
+    "desc": "US optical-components maker supplying transceivers and silicon photonics for AI data-center networking, distinct from Chinese suppliers Innolight/Eoptolink already in this map; a recipient of part of Nvidia's optics investment program.",
+    "fact": "Nvidia split a $4B optics commitment evenly between Coherent and Lumentum ($2B each), including equity stakes and multibillion-dollar purchase commitments for laser components.",
+    "src": "coherentNvidia"
+  },
+  {
+    "id": "lenovo",
+    "name": "Lenovo",
+    "layer": "Systems & sites",
+    "sub": "0992.HK · global AI server ODM",
+    "desc": "Global PC maker turned major AI-server ODM through its Infrastructure Solutions Group, building Nvidia GPU-based systems for hyperscale and enterprise customers.",
+    "fact": "Q1 FY2027 revenue hit a record $26.94B, up 43% YoY; Infrastructure Solutions Group revenue rose 98% YoY to $8.5B and the AI server pipeline reached $54B.",
+    "src": "lenovoAI"
   }
 ];
 
@@ -1509,6 +1644,134 @@ export const edges: MapEdge[] = [
     "label": "AI cluster switching; Meta >10% of revenue",
     "cite": "Fierce Network · 2026",
     "id": "e100"
+  },
+  {
+    "from": "smic",
+    "to": "huawei",
+    "type": "supply",
+    "label": "5nm-class N+3 node fabs Ascend 950PR",
+    "cite": "TrendForce · Apr 7, 2026",
+    "id": "e101"
+  },
+  {
+    "from": "huawei",
+    "to": "chinacsp",
+    "type": "partner",
+    "label": "ByteDance, Alibaba, Tencent large Ascend 950PR orders",
+    "cite": "Tom's Hardware · 2026",
+    "id": "e102"
+  },
+  {
+    "from": "huawei",
+    "to": "deepseek",
+    "type": "partner",
+    "label": "DeepSeek V4 inference validated on Ascend 950PR via CANN Next",
+    "cite": "TrendForce · Apr 7, 2026",
+    "id": "e103"
+  },
+  {
+    "from": "bloomenergy",
+    "to": "oracle",
+    "type": "supply",
+    "label": "Up to 2.8GW of SOFC systems under expanded MSA",
+    "cite": "Bloom Energy · Apr 13, 2026",
+    "id": "e104"
+  },
+  {
+    "from": "bloomenergy",
+    "to": "coreweave",
+    "type": "supply",
+    "label": "On-site fuel cells for CoreWeave's Illinois AI data center",
+    "cite": "Bloom Energy / BusinessWire · Jul 16, 2024",
+    "id": "e105"
+  },
+  {
+    "from": "bloomenergy",
+    "to": "aep",
+    "type": "supply",
+    "label": "$2.65B agreement for up to 1GW of fuel cells",
+    "cite": "FuelCellsWorks · Jan 8, 2026",
+    "id": "e106"
+  },
+  {
+    "from": "iren",
+    "to": "azure",
+    "type": "supply",
+    "label": "Five-year, ~$9.7B GPU cloud compute agreement",
+    "cite": "IREN · 2026",
+    "id": "e107"
+  },
+  {
+    "from": "nvidia",
+    "to": "iren",
+    "type": "money",
+    "label": "5-year right to invest up to ~$2.1B via warrants",
+    "cite": "CNBC · May 7, 2026",
+    "id": "e108"
+  },
+  {
+    "from": "nvidia",
+    "to": "nscale",
+    "type": "money",
+    "label": "Guarantees up to $860M of Nscale's data-center lease",
+    "cite": "measuredai · 2026",
+    "id": "e109"
+  },
+  {
+    "from": "nscale",
+    "to": "azure",
+    "type": "partner",
+    "label": "Microsoft is anchor tenant with step-in right on Nscale leases",
+    "cite": "measuredai · 2026",
+    "id": "e110"
+  },
+  {
+    "from": "gcloud",
+    "to": "ciphermining",
+    "type": "money",
+    "label": "Guarantees $1.4B of Fluidstack's $3B/10yr lease with Cipher",
+    "cite": "Data Center Dynamics · Nov 2025",
+    "id": "e111"
+  },
+  {
+    "from": "nvidia",
+    "to": "lambdaai",
+    "type": "money",
+    "label": "Nvidia-backed neocloud; pre-IPO round up to $3B at ~$12B valuation",
+    "cite": "Bloomberg · Aug 24, 2026",
+    "id": "e112"
+  },
+  {
+    "from": "tokyoelectron",
+    "to": "samsung",
+    "type": "supply",
+    "label": "Etch/deposition equipment for advanced logic and HBM DRAM",
+    "cite": "TrendForce · Dec 8, 2025",
+    "id": "e113"
+  },
+  {
+    "from": "coherentcorp",
+    "to": "nvidia",
+    "type": "supply",
+    "label": "Optical transceivers/silicon photonics under Nvidia's $4B optics program",
+    "cite": "Tech Insider · 2026",
+    "id": "e114"
+  },
+  {
+    "from": "lenovo",
+    "to": "nvidia",
+    "type": "supply",
+    "label": "AI server ODM; ISG revenue +98% YoY on AI systems",
+    "cite": "InfotechLead · 2026",
+    "id": "e115"
+  },
+  {
+    "from": "nvidia",
+    "to": "perplexity",
+    "type": "money",
+    "label": "In talks to invest at $30B+ valuation; Perplexity runs agents on Nvidia Vera",
+    "cite": "The Information / Yahoo Finance · Aug 23, 2026",
+    "id": "e116"
   }
 ];
 
@@ -1524,7 +1787,12 @@ export const columns: MapColumn[] = [
       "mistral",
       "deepseek",
       "xai",
-      "scaleai"
+      "scaleai",
+      "perplexity",
+      "ssi",
+      "thinkingmachines",
+      "moonshotai",
+      "zhipuai"
     ]
   },
   {
@@ -1544,7 +1812,10 @@ export const columns: MapColumn[] = [
       "g42",
       "mgx",
       "databricks",
-      "togetherai"
+      "togetherai",
+      "iren",
+      "lambdaai",
+      "nscale"
     ]
   },
   {
@@ -1564,7 +1835,8 @@ export const columns: MapColumn[] = [
       "softbank",
       "groq",
       "qualcomm",
-      "intel"
+      "intel",
+      "huawei"
     ]
   },
   {
@@ -1585,7 +1857,9 @@ export const columns: MapColumn[] = [
       "seagate",
       "appliedmaterials",
       "lamresearch",
-      "kla"
+      "kla",
+      "tokyoelectron",
+      "coherentcorp"
     ]
   },
   {
@@ -1601,7 +1875,9 @@ export const columns: MapColumn[] = [
       "crusoe",
       "cisco",
       "hpe",
-      "arista"
+      "arista",
+      "ciphermining",
+      "lenovo"
     ]
   },
   {
@@ -1614,7 +1890,9 @@ export const columns: MapColumn[] = [
       "talen",
       "nextera",
       "oklo",
-      "terrapower"
+      "terrapower",
+      "bloomenergy",
+      "aep"
     ]
   }
 ];
@@ -1827,6 +2105,66 @@ export const sources: Record<string, SourceRef> = {
   "arista": {
     "label": "Fierce Network · 2026",
     "url": "https://www.fierce-network.com/cloud/arista-rides-ai-past-cisco-now-nvidia-looms"
+  },
+  "huaweiAscend": {
+    "label": "Tom's Hardware · 2026",
+    "url": "https://www.tomshardware.com/tech-industry/huawei-expects-12-billion-in-ai-chip-revenue-this-year-as-nvidias-china-market-share-hits-zero"
+  },
+  "bloomOracle": {
+    "label": "Bloom Energy · Apr 13, 2026",
+    "url": "https://www.bloomenergy.com/news/bloom-energy-and-oracle-expand-strategic-partnership-to-deploy-up-to-2-8-gw-to-accelerate-ai-infrastructure-build-out/"
+  },
+  "irenMicrosoft": {
+    "label": "IREN · 2026",
+    "url": "https://iren.com/resources/blog/iren-signs97-billion-agreement-with-microsoft-to-deploy-ai-cloud-infrastructure"
+  },
+  "bloomAEP": {
+    "label": "FuelCellsWorks · Jan 8, 2026",
+    "url": "https://fuelcellsworks.com/2026/01/08/electrolyzer/american-electric-power-locks-in-2-65bn-deal-to-deploy-up-to-1gw-of-bloom-energy-fuel-cells"
+  },
+  "lambdaFunding": {
+    "label": "Bloomberg · Aug 24, 2026",
+    "url": "https://www.bloomberg.com/news/articles/2026-08-24/ai-cloud-provider-lambda-in-talks-for-3-billion-pre-ipo-round"
+  },
+  "nscaleNvidia": {
+    "label": "measuredai · 2026",
+    "url": "https://measuredai.substack.com/p/microsoft-monarch-data-center"
+  },
+  "cipherGoogle": {
+    "label": "Data Center Dynamics · Nov 2025",
+    "url": "https://www.datacenterdynamics.com/en/news/cipher-mining-secures-fluidstack-as-a-customer-and-google-as-an-investor/"
+  },
+  "perplexityNvidia": {
+    "label": "Yahoo Finance / The Information · Aug 23, 2026",
+    "url": "https://finance.yahoo.com/technology/ai/articles/nvidia-discusses-perplexity-investment-30-031804276.html"
+  },
+  "ssiSource": {
+    "label": "Wikipedia · Safe Superintelligence Inc.",
+    "url": "https://en.wikipedia.org/wiki/Safe_Superintelligence_Inc."
+  },
+  "tmlSource": {
+    "label": "Wikipedia · Thinking Machines Lab",
+    "url": "https://en.wikipedia.org/wiki/Thinking_Machines_Lab"
+  },
+  "moonshotSource": {
+    "label": "The AI Insider · May 8, 2026",
+    "url": "https://theaiinsider.tech/2026/05/08/moonshot-ai-closes-2b-funding-round-at-20b-valuation-as-kimi-models-rival-openai-and-anthropic/"
+  },
+  "zhipuSource": {
+    "label": "CNBC · Jan 8, 2026",
+    "url": "https://www.cnbc.com/2026/01/08/china-ai-tiger-goes-ipo-zhipu-hong-kong-debut-openai-knowledge-atlas-hsi-hang-seng-listing.html"
+  },
+  "tokyoElectronAI": {
+    "label": "TrendForce · Dec 8, 2025",
+    "url": "https://www.trendforce.com/news/2025/12/08/news-tokyo-electron-sees-ai-driven-sales-hitting-40-by-2026-offsetting-china-slowdown/"
+  },
+  "coherentNvidia": {
+    "label": "Tech Insider · 2026",
+    "url": "https://tech-insider.org/nvidia-silicon-photonics-lumentum-coherent-ai-data-center-2026/"
+  },
+  "lenovoAI": {
+    "label": "InfotechLead · 2026",
+    "url": "https://infotechlead.com/networking/lenovo-revenue-jumps-43-to-26-94-bn-as-ai-server-pipeline-hits-54-bn-97687"
   }
 };
 
