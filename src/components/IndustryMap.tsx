@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { edges, nodes } from "@/data/industry-map";
 import { allUSSymbols } from "@/data/tickers";
-import { useQuotes } from "@/hooks/useQuotes";
-import { useEarnings } from "@/hooks/useEarnings";
+import { useQuotes, type QuotesSeed } from "@/hooks/useQuotes";
+import { useEarnings, type EarningsSeed } from "@/hooks/useEarnings";
 import { usePriceAlerts, describeAlert } from "@/hooks/usePriceAlerts";
 import { POLL_OPTIONS, usePollingInterval } from "@/hooks/usePollingInterval";
 import { useTheme } from "@/hooks/useTheme";
@@ -46,7 +46,14 @@ const TABS: TabDef[] = [
   { kind: "single", view: "calendar", label: "Earnings calendar" },
 ];
 
-export default function IndustryMap() {
+export default function IndustryMap({
+  quotesSeed,
+  earningsSeed,
+}: {
+  /** Server-fetched snapshots (see app/page.tsx) used to skip the cold-load loading flash. */
+  quotesSeed?: QuotesSeed;
+  earningsSeed?: EarningsSeed;
+} = {}) {
   const [view, setView] = useState<View>("network");
   const [selected, setSelected] = useState<string | null>("apple");
   const [search, setSearch] = useState("");
@@ -72,13 +79,18 @@ export default function IndustryMap() {
   // node's ticker badge (not just the selected one) reflects a live change%.
   const { quotes, loading: quotesLoading, progress: quotesProgress, lastUpdatedAt } = useQuotes(
     allUSSymbols,
-    pollMs
+    pollMs,
+    quotesSeed
   );
   // Forces a re-render every ~10s purely so the "updated Xs/m ago" text below stays fresh.
   useNowTick(10_000);
   // Earnings calendars move slowly: one shared batch fetch, refreshed every 6 hours,
   // powering the "E {date}" labels on nodes, mobile cards and the dossier.
-  const { earnings, loading: earningsLoading, lastUpdatedAt: earningsUpdatedAt } = useEarnings(allUSSymbols);
+  const { earnings, loading: earningsLoading, lastUpdatedAt: earningsUpdatedAt } = useEarnings(
+    allUSSymbols,
+    undefined,
+    earningsSeed
+  );
   // User-created, browser-local price alerts, evaluated against the shared quote poll.
   const alertApi = usePriceAlerts(quotes);
 

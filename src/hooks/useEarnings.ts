@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { EarningsMap } from "@/app/api/earnings/route";
 import { fetchInChunks } from "@/lib/batchFetch";
+
+export interface EarningsSeed {
+  earnings: EarningsMap;
+  lastUpdatedAt: number;
+}
 
 export const EARNINGS_REFRESH_MS = 6 * 60 * 60 * 1000; // calendars move slowly
 // Earnings data is slow-changing and not time-critical, unlike price quotes. Delaying the
@@ -16,10 +21,11 @@ const INITIAL_FETCH_DELAY_MS = 15_000;
  * /api/earnings?symbols=A,B,C and refreshes every `refreshMs` (default 6h).
  * Unlike quotes, this is intentionally low-frequency.
  */
-export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFRESH_MS) {
-  const [earnings, setEarnings] = useState<EarningsMap>({});
+export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFRESH_MS, seed?: EarningsSeed) {
+  const [earnings, setEarnings] = useState<EarningsMap>(() => seed?.earnings ?? {});
   const [loading, setLoading] = useState(false);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(() => seed?.lastUpdatedAt ?? null);
+  const seedConsumed = useRef(false);
   const key = symbols.slice().sort().join(",");
 
   useEffect(() => {
@@ -44,7 +50,12 @@ export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFR
       }
     }
 
-    const initialTimer = setTimeout(fetchEarnings, INITIAL_FETCH_DELAY_MS);
+    let initialTimer: ReturnType<typeof setTimeout> | undefined;
+    if (seed && !seedConsumed.current) {
+      seedConsumed.current = true;
+    } else {
+      initialTimer = setTimeout(fetchEarnings, INITIAL_FETCH_DELAY_MS);
+    }
     let interval: ReturnType<typeof setInterval> | undefined;
     if (refreshMs > 0) {
       interval = setInterval(fetchEarnings, refreshMs + INITIAL_FETCH_DELAY_MS);
@@ -52,10 +63,12 @@ export function useEarnings(symbols: string[], refreshMs: number = EARNINGS_REFR
     return () => {
       cancelled = true;
       controller.abort();
-      clearTimeout(initialTimer);
+      if (initialTimer) clearTimeout(initialTimer);
       if (interval) clearInterval(interval);
     };
-  }, [key, refreshMs]);
+    // `seed` is only ever consumed once (via seedConsumed.current); including it here is
+    // safe (its identity is stable for the component's lifetime) and satisfies exhaustive-deps.
+  }, [key, refreshMs, seed]);
 
   return { earnings, loading, lastUpdatedAt };
 }

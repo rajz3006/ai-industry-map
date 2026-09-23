@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { QuoteResult } from "@/app/api/quote/route";
 import { fetchInChunks } from "@/lib/batchFetch";
 
 export type QuoteMap = Record<string, QuoteResult | { error: string } | undefined>;
+
+export interface QuotesSeed {
+  quotes: QuoteMap;
+  lastUpdatedAt: number;
+}
 
 export interface QuoteProgress {
   loaded: number;
@@ -27,12 +32,20 @@ export interface UseQuotesResult {
  * set changes) without repeating. Symbols should be limited to what's currently visible —
  * the caller is responsible for keeping this list reasonably small relative to the
  * provider's rate limit.
+ *
+ * `seed`, when given, is a server-fetched snapshot (see app/page.tsx) used as the initial
+ * state so the first paint already shows prices instead of a loading flash. The hook still
+ * skips its very first fetch cycle in that case — not every effect re-run — so changing the
+ * poll interval afterward still refreshes immediately, as it always has.
  */
-export function useQuotes(symbols: string[], intervalMs: number): UseQuotesResult {
-  const [quotes, setQuotes] = useState<QuoteMap>({});
+export function useQuotes(symbols: string[], intervalMs: number, seed?: QuotesSeed): UseQuotesResult {
+  const [quotes, setQuotes] = useState<QuoteMap>(() => seed?.quotes ?? {});
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<QuoteProgress>({ loaded: 0, total: 0 });
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [progress, setProgress] = useState<QuoteProgress>(() =>
+    seed ? { loaded: symbols.length, total: symbols.length } : { loaded: 0, total: 0 }
+  );
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(() => seed?.lastUpdatedAt ?? null);
+  const seedConsumed = useRef(false);
   const key = symbols.slice().sort().join(",");
 
   useEffect(() => {
@@ -62,7 +75,11 @@ export function useQuotes(symbols: string[], intervalMs: number): UseQuotesResul
       }
     }
 
-    fetchQuotes();
+    if (seed && !seedConsumed.current) {
+      seedConsumed.current = true;
+    } else {
+      fetchQuotes();
+    }
     let interval: ReturnType<typeof setInterval> | undefined;
     if (intervalMs > 0) interval = setInterval(fetchQuotes, intervalMs);
     return () => {
@@ -70,7 +87,9 @@ export function useQuotes(symbols: string[], intervalMs: number): UseQuotesResul
       controller.abort();
       if (interval) clearInterval(interval);
     };
-  }, [key, intervalMs]);
+    // `seed` is only ever consumed once (via seedConsumed.current); including it here is
+    // safe (its identity is stable for the component's lifetime) and satisfies exhaustive-deps.
+  }, [key, intervalMs, seed]);
 
   return { quotes, loading, progress, lastUpdatedAt };
 }
