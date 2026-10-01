@@ -56,7 +56,9 @@ const config = {
   maxPositions: Number(args.maxPositions ?? 5),
   startingCash: Number(args.cash ?? 5000),
   trendFilterDays: Number(args.trendFilterDays ?? 0),
-  macroDipThreshold: Number(args.macroDipThreshold ?? 0) / 100,
+  // Default on (-1%): backtesting showed this raises the edge margin; the trend filter didn't,
+  // so it stays opt-in. See trading_fast_rotation_strategy memory for the comparison.
+  macroDipThreshold: Number(args.macroDipThreshold ?? -1) / 100,
 };
 const variantArg = args.variant ?? "both";
 const variants = variantArg === "raw" ? ["raw"] : variantArg === "zscore" ? ["zscore"] : ["raw", "zscore"];

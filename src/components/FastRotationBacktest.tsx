@@ -33,7 +33,9 @@ const DEFAULT_FORM: FormState = {
   cash: 5000,
   variant: "both",
   trendFilterDays: 0,
-  macroDipThreshold: 0,
+  // Default on: backtesting showed this genuinely improves the edge margin; the trend filter
+  // didn't, so it stays opt-in (0). See the Fast Rotation strategy notes.
+  macroDipThreshold: -1,
 };
 
 type DayActivity = { realizedPnl: number; opened: string[]; closedWin: number; closedLoss: number };

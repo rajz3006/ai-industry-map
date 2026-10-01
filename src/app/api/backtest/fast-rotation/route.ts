@@ -26,7 +26,10 @@ export async function GET(req: Request) {
     maxPositions: Math.round(clampNum(url, "maxPositions", 5, 1, 15)),
     startingCash: clampNum(url, "cash", 5000, 100, 1_000_000),
     trendFilterDays: Math.round(clampNum(url, "trendFilterDays", 0, 0, 200)),
-    macroDipThreshold: clampNum(url, "macroDipThreshold", 0, -20, 0) / 100,
+    // Default on: backtesting showed this genuinely raises the edge margin (+14.6pp vs +10.2pp
+    // baseline), unlike the trend filter, which hurt results — see trading_fast_rotation_strategy
+    // memory for the full comparison. -1% = require a broadly red day across the universe.
+    macroDipThreshold: clampNum(url, "macroDipThreshold", -1, -20, 0) / 100,
   };
   const variantParam = url.searchParams.get("variant") ?? "both";
   const variants: SelectionVariant[] =
