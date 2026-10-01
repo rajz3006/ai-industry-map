@@ -23,6 +23,13 @@ export function formatChangePercent(pct: number | undefined | null): string {
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
 }
 
+/** Signed dollar amount, e.g. +$123.45 / -$67.80 — for P&L figures where the sign matters. */
+export function formatSignedDollars(amount: number | undefined | null): string {
+  if (typeof amount !== "number" || Number.isNaN(amount)) return "—";
+  const sign = amount >= 0 ? "+" : "-";
+  return `${sign}$${Math.abs(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function formatChangeAbs(chg: number | undefined | null): string {
   if (typeof chg !== "number" || Number.isNaN(chg)) return "";
   return `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}`;

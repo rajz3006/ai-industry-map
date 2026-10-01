@@ -19,11 +19,12 @@ import MarketsTable from "./MarketsTable";
 import MoversTable from "./MoversTable";
 import OpportunitiesScreener from "./OpportunitiesScreener";
 import TradeDesk from "./TradeDesk";
+import FastRotationBacktest from "./FastRotationBacktest";
 import EarningsCalendar from "./EarningsCalendar";
 import StockDetail from "./StockDetail";
 import AlertsPanel from "./AlertsPanel";
 
-type View = "network" | "loops" | "risks" | "markets" | "movers" | "opportunities" | "trading" | "calendar";
+type View = "network" | "loops" | "risks" | "markets" | "movers" | "opportunities" | "trading" | "backtest" | "calendar";
 
 // "Who pays whom" and "What breaks first" live under one "AI Overview" top-level tab as
 // sub-tabs, rather than each taking a top-level slot next to Markets/Movers/Calendar.
@@ -45,6 +46,7 @@ const TABS: TabDef[] = [
   { kind: "single", view: "movers", label: "Daily movers" },
   { kind: "single", view: "opportunities", label: "Opportunities" },
   { kind: "single", view: "trading", label: "Trade Desk" },
+  { kind: "single", view: "backtest", label: "Fast Rotation" },
   { kind: "single", view: "calendar", label: "Earnings calendar" },
 ];
 
@@ -333,6 +335,10 @@ export default function IndustryMap() {
 
       <section className={`insight ${view === "trading" ? "active" : ""}`}>
         {view === "trading" && <TradeDesk />}
+      </section>
+
+      <section className={`insight ${view === "backtest" ? "active" : ""}`}>
+        {view === "backtest" && <FastRotationBacktest />}
       </section>
 
       <section className={`insight ${view === "calendar" ? "active" : ""}`}>

@@ -2943,3 +2943,236 @@ table.td-positions {
     grid-template-columns: 1fr;
   }
 }
+
+/* Fast Rotation backtest tab */
+.bt-wrap {
+  padding: 22px 0;
+}
+.bt-head h2 {
+  margin: 0 0 8px;
+}
+.bt-disclaimer {
+  max-width: 820px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+.bt-disclaimer b {
+  color: var(--ink);
+}
+.bt-panel {
+  background: var(--panel);
+  border: 1px solid var(--border-input);
+  border-radius: 3px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.bt-panel h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.bt-panel-note {
+  margin: -4px 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.bt-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.bt-run-btn {
+  margin-top: 2px;
+}
+.bt-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bt-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.bt-summary-card {
+  background: var(--panel);
+  border: 1px solid var(--border-input);
+  border-radius: 3px;
+  padding: 14px 16px;
+}
+.bt-summary-card h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.bt-summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.bt-summary-stats b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.bt-variant-btn {
+  margin-top: 12px;
+  background: none;
+  border: 1px solid var(--border-input);
+  border-radius: 2px;
+  padding: 5px 10px;
+  color: var(--ink);
+  font: 500 11px "DM Mono", monospace;
+  cursor: pointer;
+}
+.bt-variant-btn:hover {
+  border-color: var(--focus);
+}
+.bt-variant-btn.active {
+  background: color-mix(in srgb, var(--focus) 12%, transparent);
+  border-color: var(--focus);
+}
+
+.bt-calendar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.bt-cal-month {
+  flex: 1 1 260px;
+  min-width: 240px;
+}
+.bt-cal-month h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.bt-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+.bt-cal-weekdays span {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+.bt-cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+.bt-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  aspect-ratio: 1;
+  min-height: 40px;
+  background: color-mix(in srgb, var(--border-input) 25%, transparent);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 2px;
+  cursor: pointer;
+  font: 500 9px "DM Mono", monospace;
+  color: var(--muted);
+}
+.bt-cal-day.empty {
+  background: none;
+  cursor: default;
+}
+.bt-cal-day.out-of-range {
+  opacity: 0.3;
+  cursor: default;
+}
+.bt-cal-day:not(.empty):not(.out-of-range):hover {
+  border-color: var(--focus);
+}
+.bt-cal-day.selected {
+  border-color: var(--focus);
+  border-width: 2px;
+}
+.bt-cal-date {
+  font-size: 9px;
+}
+.bt-cal-pnl {
+  font-size: 9px;
+  font-weight: 600;
+}
+.bt-cal-count {
+  font-size: 8px;
+  opacity: 0.8;
+}
+.bt-cal-day.pos-1 {
+  background: color-mix(in srgb, var(--green) 25%, var(--panel));
+  color: var(--ink);
+}
+.bt-cal-day.pos-2 {
+  background: color-mix(in srgb, var(--green) 50%, var(--panel));
+  color: var(--ink);
+}
+.bt-cal-day.pos-3 {
+  background: color-mix(in srgb, var(--green) 75%, var(--panel));
+  color: var(--ink);
+}
+.bt-cal-day.neg-1 {
+  background: color-mix(in srgb, var(--risk) 25%, var(--panel));
+  color: var(--ink);
+}
+.bt-cal-day.neg-2 {
+  background: color-mix(in srgb, var(--risk) 50%, var(--panel));
+  color: var(--ink);
+}
+.bt-cal-day.neg-3 {
+  background: color-mix(in srgb, var(--risk) 75%, var(--panel));
+  color: var(--ink);
+}
+
+.bt-day-detail {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--row-border);
+}
+.bt-day-detail h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+.bt-day-trade {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bt-reason {
+  font: 500 10px "DM Mono", monospace;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+.bt-reason.target {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 15%, transparent);
+}
+.bt-reason.stop {
+  color: var(--risk);
+  background: color-mix(in srgb, var(--risk) 15%, transparent);
+}
+.bt-reason.open {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--border-input) 30%, transparent);
+}
+
+@media (max-width: 720px) {
+  .bt-controls {
+    flex-direction: column;
+  }
+  .bt-cal-month {
+    min-width: 100%;
+  }
+}
