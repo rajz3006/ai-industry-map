@@ -19,6 +19,8 @@ interface FormState {
   maxPositions: number;
   cash: number;
   variant: "both" | SelectionVariant;
+  trendFilterDays: number;
+  macroDipThreshold: number;
 }
 
 const DEFAULT_FORM: FormState = {
@@ -30,6 +32,8 @@ const DEFAULT_FORM: FormState = {
   maxPositions: 5,
   cash: 5000,
   variant: "both",
+  trendFilterDays: 0,
+  macroDipThreshold: 0,
 };
 
 type DayActivity = { realizedPnl: number; opened: string[]; closedWin: number; closedLoss: number };
@@ -93,6 +97,8 @@ export default function FastRotationBacktest() {
       maxPositions: form.maxPositions,
       cash: form.cash,
       variant: form.variant,
+      trendFilterDays: form.trendFilterDays,
+      macroDipThreshold: form.macroDipThreshold,
     });
   }
 
@@ -205,6 +211,46 @@ export default function FastRotationBacktest() {
             </select>
           </label>
         </div>
+
+        <h3 className="bt-filters-heading">Quality filters (optional)</h3>
+        <p className="bt-panel-note">
+          Neither filter is free — each cuts the trade count, so check the summary cards below to see whether the
+          win-rate/edge gain was worth the lower throughput in this window.
+        </p>
+        <div className="bt-controls">
+          <label className="op-filter">
+            <span>Trend filter (SMA days, 0 = off)</span>
+            <input
+              type="number"
+              min={0}
+              max={200}
+              step={1}
+              value={form.trendFilterDays}
+              onChange={(e) => field("trendFilterDays", Number(e.target.value) || 0)}
+            />
+            <span className="bt-filter-hint">
+              Only buy a loser if it&rsquo;s still above its own trailing N-day average (&ldquo;still bullish&rdquo;
+              proxy — no historical analyst-rating data exists to backtest an actual Buy rating).
+            </span>
+          </label>
+          <label className="op-filter">
+            <span>Macro-dip gate (universe median %, 0 = off)</span>
+            <input
+              type="number"
+              min={-20}
+              max={0}
+              step={0.25}
+              value={form.macroDipThreshold}
+              onChange={(e) => field("macroDipThreshold", Number(e.target.value) || 0)}
+            />
+            <span className="bt-filter-hint">
+              Only buy on days where the whole 57-symbol universe&rsquo;s median move is at or below this (a broad
+              red day implies the dip is market-wide, not one stock&rsquo;s own bad news). E.g. -1 requires a
+              genuinely broad selloff day before buying anything.
+            </span>
+          </label>
+        </div>
+
         <button className="td-place-btn bt-run-btn" disabled={loading} onClick={runBacktest}>
           {loading ? "Running…" : "Run backtest"}
         </button>

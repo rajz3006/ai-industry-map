@@ -5,13 +5,15 @@
 // Pure simulation functions operate on already-loaded bar data so parameter tweaks (stop %,
 // target %, sizing) never require a re-fetch — only changing the day count does.
 
-import { alpacaGetMultiBars, type AlpacaBar } from "@/lib/alpaca";
-import { allUSSymbols } from "@/data/tickers";
+// Relative imports (not "@/...") so this file can also be loaded directly by plain Node —
+// scripts/backtest-fast-rotation.mjs imports it without any Next.js/tsconfig-paths tooling.
+import { alpacaGetMultiBars, type AlpacaBar } from "./alpaca.ts";
+import { allUSSymbols } from "../data/tickers.ts";
 
 const VOL_WINDOW = 20;
 const MIN_CLOSES_REQUIRED = VOL_WINDOW + 1; // matches src/app/api/opportunities/route.ts
 const NY_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" });
-const BAR_FETCH_BUFFER_DAYS = 90; // extra lookback for z-score warmup + holidays, beyond the requested window
+const BAR_FETCH_BUFFER_DAYS = 120; // extra lookback for z-score/trend-filter warmup + holidays, beyond the requested window
 const BAR_CACHE_TTL_MS = 15 * 60_000;
 
 export interface OhlcSeries {
@@ -30,6 +32,15 @@ export interface BacktestConfig {
   maxPositionPct: number; // fraction, e.g. 0.25 for 25%
   maxPositions: number;
   startingCash: number;
+  /** "Bullish/Buy signal" proxy: require close > this many trailing days' SMA to be eligible.
+   * 0 disables. No historical analyst-rating data exists to backtest an actual "Buy" rating,
+   * so a trend filter (price above its own longer-term average) stands in for it — same idea
+   * Minervini/O'Neil use: don't buy a dip in a name whose longer-term trend is already broken. */
+  trendFilterDays: number;
+  /** "One-off macro/geopolitical dip, not company-specific" proxy: only buy on days where the
+   * whole 57-symbol universe's median change% is at or below this (a broad red day implies the
+   * move isn't one stock's own bad news). 0 disables — any day is eligible to buy on. */
+  macroDipThreshold: number; // fraction, e.g. -0.01 for "universe median <= -1%"
 }
 
 export type SelectionVariant = "raw" | "zscore";
@@ -142,6 +153,36 @@ function metricsFor(
   return { changePercent, zScore };
 }
 
+/** True if `symbol` closed above its own trailing `days`-session SMA on `date` (the "still
+ * bullish" trend gate). Insufficient history fails conservatively (treated as not bullish). */
+function trendOk(bySymbol: Map<string, OhlcSeries>, symbol: string, date: string, days: number): boolean {
+  if (!days) return true;
+  const s = bySymbol.get(symbol);
+  if (!s) return false;
+  const idx = s.dateIndex.get(date);
+  if (idx === undefined || idx + 1 < days) return false;
+  const window = s.closes.slice(idx + 1 - days, idx + 1);
+  const sma = window.reduce((a, b) => a + b, 0) / window.length;
+  return s.closes[idx] > sma;
+}
+
+/** Median daily change% across every symbol with a valid prior close on `date` — a cheap proxy
+ * for "was this a broad, macro-driven red day" vs. "this one name cratered on its own news." */
+function universeMedianChangePct(bySymbol: Map<string, OhlcSeries>, date: string): number | null {
+  const changes: number[] = [];
+  for (const s of bySymbol.values()) {
+    const idx = s.dateIndex.get(date);
+    if (idx === undefined || idx < 1) continue;
+    const prev = s.closes[idx - 1];
+    if (prev === 0) continue;
+    changes.push(((s.closes[idx] - prev) / prev) * 100);
+  }
+  if (changes.length === 0) return null;
+  changes.sort((a, b) => a - b);
+  const mid = Math.floor(changes.length / 2);
+  return changes.length % 2 === 0 ? (changes[mid - 1] + changes[mid]) / 2 : changes[mid];
+}
+
 function barOn(bySymbol: Map<string, OhlcSeries>, symbol: string, date: string): { close: number; high: number; low: number } | null {
   const s = bySymbol.get(symbol);
   if (!s) return null;
@@ -216,13 +257,26 @@ export function runBacktest(
         0
       );
 
+    // Macro-dip gate: if the whole universe isn't down at least this much today, skip buying
+    // entirely — a lone red name on an otherwise calm/green day reads as company-specific risk,
+    // not the "broad one-off" dip this filter is meant to admit.
+    const macroOk =
+      !config.macroDipThreshold ||
+      (() => {
+        const median = universeMedianChangePct(bySymbol, date);
+        return median !== null && median <= config.macroDipThreshold * 100;
+      })();
+
     const held = new Set(positions.map((p) => p.symbol));
     const candidates: { symbol: string; changePercent: number; zScore: number | null }[] = [];
-    for (const sym of allUSSymbols) {
-      if (held.has(sym)) continue;
-      const m = metricsFor(bySymbol, sym, date);
-      if (!m) continue;
-      candidates.push({ symbol: sym, ...m });
+    if (macroOk) {
+      for (const sym of allUSSymbols) {
+        if (held.has(sym)) continue;
+        if (!trendOk(bySymbol, sym, date, config.trendFilterDays)) continue;
+        const m = metricsFor(bySymbol, sym, date);
+        if (!m) continue;
+        candidates.push({ symbol: sym, ...m });
+      }
     }
     const ranked = rankCandidates(candidates, variant, config.maxPositions);
 

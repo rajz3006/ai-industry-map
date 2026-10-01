@@ -25,6 +25,8 @@ export async function GET(req: Request) {
     maxPositionPct: clampNum(url, "maxPositionPct", 25, 5, 100) / 100,
     maxPositions: Math.round(clampNum(url, "maxPositions", 5, 1, 15)),
     startingCash: clampNum(url, "cash", 5000, 100, 1_000_000),
+    trendFilterDays: Math.round(clampNum(url, "trendFilterDays", 0, 0, 200)),
+    macroDipThreshold: clampNum(url, "macroDipThreshold", 0, -20, 0) / 100,
   };
   const variantParam = url.searchParams.get("variant") ?? "both";
   const variants: SelectionVariant[] =
