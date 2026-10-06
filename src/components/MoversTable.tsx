@@ -7,6 +7,7 @@ import type { Period } from "@/app/api/movers/trend/route";
 import type { EarningsMap } from "@/app/api/earnings/route";
 import CategoryTrendChart from "./CategoryTrendChart";
 import SignalsPanel from "./SignalsPanel";
+import MoversNewsPanel from "./MoversNewsPanel";
 import { changeDirection, formatChangePercent, formatPrice } from "@/lib/format";
 
 const TOP_N = 10;
@@ -144,58 +145,62 @@ export default function MoversTable({
         {loading && !data && <p className="mv-loading">Loading session history…</p>}
 
         {data && (
-          <>
-            <p className="mv-session">
-              Session <b>{fmtDateLabel(data.date)}</b> vs. the prior close
-              {loading && <span className="mv-updating"> · refreshing…</span>}
-            </p>
+          <div className="mv-session-layout">
+            <div className="mv-session-main">
+              <p className="mv-session">
+                Session <b>{fmtDateLabel(data.date)}</b> vs. the prior close
+                {loading && <span className="mv-updating"> · refreshing…</span>}
+              </p>
 
-            <div className="mv-categories">
-              <div className="mv-cat-col">
-                <h3>Segments trending up</h3>
-                {topUp.length === 0 && <p className="mv-empty">No segment averaged a gain this session.</p>}
-                {topUp.map((c) => (
-                  <div className="mv-cat-row" key={c.layer}>
-                    <span className="mv-cat-name">{c.layer}</span>
-                    <div className="mv-cat-bar-track">
-                      <div
-                        className="mv-cat-bar up"
-                        style={{ width: `${(Math.abs(c.avgChangePercent) / maxAbsCategoryMove) * 100}%` }}
-                      />
+              <div className="mv-categories">
+                <div className="mv-cat-col">
+                  <h3>Segments trending up</h3>
+                  {topUp.length === 0 && <p className="mv-empty">No segment averaged a gain this session.</p>}
+                  {topUp.map((c) => (
+                    <div className="mv-cat-row" key={c.layer}>
+                      <span className="mv-cat-name">{c.layer}</span>
+                      <div className="mv-cat-bar-track">
+                        <div
+                          className="mv-cat-bar up"
+                          style={{ width: `${(Math.abs(c.avgChangePercent) / maxAbsCategoryMove) * 100}%` }}
+                        />
+                      </div>
+                      <span className="chg up">{formatChangePercent(c.avgChangePercent)}</span>
                     </div>
-                    <span className="chg up">{formatChangePercent(c.avgChangePercent)}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="mv-cat-col">
+                  <h3>Segments trending down</h3>
+                  {topDown.length === 0 && <p className="mv-empty">No segment averaged a loss this session.</p>}
+                  {topDown.map((c) => (
+                    <div className="mv-cat-row" key={c.layer}>
+                      <span className="mv-cat-name">{c.layer}</span>
+                      <div className="mv-cat-bar-track">
+                        <div
+                          className="mv-cat-bar down"
+                          style={{ width: `${(Math.abs(c.avgChangePercent) / maxAbsCategoryMove) * 100}%` }}
+                        />
+                      </div>
+                      <span className="chg down">{formatChangePercent(c.avgChangePercent)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="mv-cat-col">
-                <h3>Segments trending down</h3>
-                {topDown.length === 0 && <p className="mv-empty">No segment averaged a loss this session.</p>}
-                {topDown.map((c) => (
-                  <div className="mv-cat-row" key={c.layer}>
-                    <span className="mv-cat-name">{c.layer}</span>
-                    <div className="mv-cat-bar-track">
-                      <div
-                        className="mv-cat-bar down"
-                        style={{ width: `${(Math.abs(c.avgChangePercent) / maxAbsCategoryMove) * 100}%` }}
-                      />
-                    </div>
-                    <span className="chg down">{formatChangePercent(c.avgChangePercent)}</span>
-                  </div>
-                ))}
+
+              <div className="mv-leaders">
+                <div className="mv-leader-col">
+                  <h3>Top gainers</h3>
+                  <MoverList rows={gainers} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
+                </div>
+                <div className="mv-leader-col">
+                  <h3>Top losers</h3>
+                  <MoverList rows={losers} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
+                </div>
               </div>
             </div>
 
-            <div className="mv-leaders">
-              <div className="mv-leader-col">
-                <h3>Top gainers</h3>
-                <MoverList rows={gainers} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
-              </div>
-              <div className="mv-leader-col">
-                <h3>Top losers</h3>
-                <MoverList rows={losers} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
-              </div>
-            </div>
-          </>
+            <MoversNewsPanel date={date} />
+          </div>
         )}
       </section>
     </div>

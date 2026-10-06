@@ -7,6 +7,17 @@ import { alpacaGetMultiBars, type AlpacaBar } from "@/lib/alpaca";
 import { allTickerRows } from "@/data/tickers";
 import { nodeById } from "@/data/industry-map";
 
+export interface SessionMoverRow extends MoverRow {
+  close: number;
+  prevClose: number;
+}
+
+export interface CategoryTrend {
+  layer: string;
+  avgChangePercent: number;
+  count: number;
+}
+
 export const LOOKBACK_DAYS = 190; // ~6 months plus buffer for period-start comparisons
 const CACHE_TTL_MS = 15 * 60_000;
 export const NY_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" });
@@ -66,4 +77,51 @@ export function resolveSessionDate(dates: string[], requested: string | null): s
 export function nodeMeta(nodeId: string): { name: string; layer: string } {
   const n = nodeById[nodeId];
   return { name: n?.name ?? nodeId, layer: n?.layer ?? "Other" };
+}
+
+/** Per-session gainer/loser rows plus per-layer average change, shared by /api/movers and
+ * /api/movers/news so "which theme moved" can never drift between the two. */
+export function computeSessionMovers(
+  bySymbol: Map<string, AlpacaBar[]>,
+  targetDate: string,
+  prevDate: string
+): { movers: SessionMoverRow[]; categoryTrends: CategoryTrend[] } {
+  const movers: SessionMoverRow[] = [];
+  for (const row of allTickerRows) {
+    if (!row.isUS) continue;
+    const bars = bySymbol.get(row.symbol);
+    if (!bars || bars.length === 0) continue;
+    const byDate = new Map(bars.map((b) => [NY_DATE_FMT.format(new Date(b.t)), b]));
+    const closeBar = byDate.get(targetDate);
+    const prevBar = byDate.get(prevDate);
+    if (!closeBar || !prevBar || prevBar.c === 0) continue;
+
+    const { name, layer } = nodeMeta(row.nodeId);
+    movers.push({
+      symbol: row.symbol,
+      nodeId: row.nodeId,
+      name,
+      layer,
+      close: closeBar.c,
+      prevClose: prevBar.c,
+      changePercent: ((closeBar.c - prevBar.c) / prevBar.c) * 100,
+    });
+  }
+  // Dedupe by symbol (a symbol can back more than one node) for category math, but keep the
+  // full per-node list for the table since users expect to see the company they searched for.
+  const bySymbolOnce = new Map<string, SessionMoverRow>();
+  for (const m of movers) if (!bySymbolOnce.has(m.symbol)) bySymbolOnce.set(m.symbol, m);
+
+  const layerTotals = new Map<string, { sum: number; count: number }>();
+  for (const m of bySymbolOnce.values()) {
+    const t = layerTotals.get(m.layer) ?? { sum: 0, count: 0 };
+    t.sum += m.changePercent;
+    t.count += 1;
+    layerTotals.set(m.layer, t);
+  }
+  const categoryTrends: CategoryTrend[] = Array.from(layerTotals.entries())
+    .map(([layer, t]) => ({ layer, avgChangePercent: t.sum / t.count, count: t.count }))
+    .sort((a, b) => b.avgChangePercent - a.avgChangePercent);
+
+  return { movers: movers.sort((a, b) => b.changePercent - a.changePercent), categoryTrends };
 }
