@@ -70,61 +70,14 @@ export default function MoversTable({
         <div>
           <h2>Industry movers</h2>
           <p>
-            How the stack has been trading over the last month or few — which segments are leading or lagging, and
-            which names are driving it — with a single session&rsquo;s detail underneath.
+            How the stack has been trading today — and over the last month or few — with today&rsquo;s session
+            detail and news first, the weekly signals and trend underneath.
           </p>
         </div>
       </div>
 
-      <SignalsPanel earnings={earnings} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
-
-      {/* --- Trend section: leaders/laggards + segment trend over a trailing period --- */}
-      <section className="mv-trend-section">
-        <div className="mv-trend-head">
-          <h3>Trend</h3>
-          <div className="mv-period-toggle" role="tablist" aria-label="Trend period">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                role="tab"
-                aria-selected={period === p.value}
-                className={`mv-period-btn ${period === p.value ? "active" : ""}`}
-                onClick={() => setPeriod(p.value)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {trend.error && <p className="mv-error">Couldn&rsquo;t load the trend: {trend.error}</p>}
-        {trend.loading && !trend.data && <p className="mv-loading">Loading {period} history…</p>}
-
-        {trend.data && (
-          <>
-            <p className="mv-session">
-              {fmtShortDate(trend.data.start)} – {fmtShortDate(trend.data.end)}
-              {trend.loading && <span className="mv-updating"> · refreshing…</span>}
-            </p>
-
-            <p className="mv-trend-subhead">Segment performance, cumulative</p>
-            <CategoryTrendChart series={trend.data.categorySeries} />
-
-            <div className="mv-leaders">
-              <div className="mv-leader-col">
-                <h3>Leaders over the period</h3>
-                <MoverList rows={trend.data.leaders.slice(0, TOP_N)} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
-              </div>
-              <div className="mv-leader-col">
-                <h3>Laggards over the period</h3>
-                <MoverList rows={trend.data.laggards.slice(0, TOP_N)} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
-              </div>
-            </div>
-          </>
-        )}
-      </section>
-
-      {/* --- Single-session detail, underneath the trend --- */}
+      {/* --- Single-session detail first, so today's gainers/losers and the news digest don't
+          require scrolling past a week of signals/trend history to reach --- */}
       <section className="mv-session-section">
         <div className="mv-trend-head">
           <h3>Session detail</h3>
@@ -201,6 +154,54 @@ export default function MoversTable({
 
             <MoversNewsPanel date={date} />
           </div>
+        )}
+      </section>
+
+      <SignalsPanel earnings={earnings} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
+
+      {/* --- Trend section: leaders/laggards + segment trend over a trailing period --- */}
+      <section className="mv-trend-section">
+        <div className="mv-trend-head">
+          <h3>Trend</h3>
+          <div className="mv-period-toggle" role="tablist" aria-label="Trend period">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                role="tab"
+                aria-selected={period === p.value}
+                className={`mv-period-btn ${period === p.value ? "active" : ""}`}
+                onClick={() => setPeriod(p.value)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {trend.error && <p className="mv-error">Couldn&rsquo;t load the trend: {trend.error}</p>}
+        {trend.loading && !trend.data && <p className="mv-loading">Loading {period} history…</p>}
+
+        {trend.data && (
+          <>
+            <p className="mv-session">
+              {fmtShortDate(trend.data.start)} – {fmtShortDate(trend.data.end)}
+              {trend.loading && <span className="mv-updating"> · refreshing…</span>}
+            </p>
+
+            <p className="mv-trend-subhead">Segment performance, cumulative</p>
+            <CategoryTrendChart series={trend.data.categorySeries} />
+
+            <div className="mv-leaders">
+              <div className="mv-leader-col">
+                <h3>Leaders over the period</h3>
+                <MoverList rows={trend.data.leaders.slice(0, TOP_N)} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
+              </div>
+              <div className="mv-leader-col">
+                <h3>Laggards over the period</h3>
+                <MoverList rows={trend.data.laggards.slice(0, TOP_N)} onSelectNode={onSelectNode} onOpenStock={onOpenStock} />
+              </div>
+            </div>
+          </>
         )}
       </section>
     </div>
