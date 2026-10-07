@@ -126,8 +126,22 @@ const MAX_FORM4_CHECKS_PER_SYMBOL = 3; // bounds worst-case XML fetches per symb
 
 /** Recent 8-Ks and open-market-buy Form 4s for one symbol, filtered to the last `sinceDate`
  * (YYYY-MM-DD, inclusive). Returns [] on any lookup failure rather than throwing, since a
- * single bad symbol (no CIK match, EDGAR hiccup) shouldn't take down the whole batch. */
-export async function fetchRecentFilingsForSymbol(symbol: string, sinceDate: string): Promise<FilingEvent[]> {
+ * single bad symbol (no CIK match, EDGAR hiccup) shouldn't take down the whole batch.
+ *
+ * `opts.forms` (default: both) lets a caller that only wants 8-Ks skip Form 4 processing
+ * entirely — Form 4 handling fetches each candidate filing's raw XML to read its transaction
+ * code (see fetchForm4TransactionCodes), which is real per-filing network cost that's wasted
+ * when the caller is only going to read 8-K `items` (already present in the cached submissions
+ * JSON with no extra fetch). src/lib/evaluation/scoreNews.ts's 8-K red-flag check is exactly
+ * that case. */
+export async function fetchRecentFilingsForSymbol(
+  symbol: string,
+  sinceDate: string,
+  opts: { forms?: Array<"4" | "8-K"> } = {}
+): Promise<FilingEvent[]> {
+  const wantForm4 = opts.forms ? opts.forms.includes("4") : true;
+  const wantForm8K = opts.forms ? opts.forms.includes("8-K") : true;
+
   const cikMap = await getCikMap();
   const entry = cikMap.get(symbol.toUpperCase());
   if (!entry) return [];
@@ -143,9 +157,9 @@ export async function fetchRecentFilingsForSymbol(symbol: string, sinceDate: str
     const form = recent.form[i];
     const url = filingDocUrl(entry.cik, recent.accessionNumber[i], recent.primaryDocument[i]);
 
-    if (form === "8-K") {
+    if (form === "8-K" && wantForm8K) {
       events.push({ symbol, companyName: entry.name, form: "8-K", filingDate: date, url, items: recent.items[i] || undefined });
-    } else if (form === "4" && form4Checked < MAX_FORM4_CHECKS_PER_SYMBOL) {
+    } else if (form === "4" && wantForm4 && form4Checked < MAX_FORM4_CHECKS_PER_SYMBOL) {
       form4Checked++;
       // submissions.json's primaryDocument for Form 4 points at the XSL-rendered human-readable
       // view (nicer as the click-through link, kept in `url` above); the raw XML with the actual

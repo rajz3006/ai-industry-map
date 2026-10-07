@@ -22,10 +22,11 @@ import TradeDesk from "./TradeDesk";
 import FastRotationBacktest from "./FastRotationBacktest";
 import EarningsCalendar from "./EarningsCalendar";
 import CatalystRadar from "./CatalystRadar";
+import StockEvaluator from "./StockEvaluator";
 import StockDetail from "./StockDetail";
 import AlertsPanel from "./AlertsPanel";
 
-type View = "network" | "loops" | "risks" | "markets" | "movers" | "opportunities" | "trading" | "backtest" | "calendar" | "catalyst";
+type View = "network" | "loops" | "risks" | "markets" | "movers" | "opportunities" | "evaluator" | "trading" | "backtest" | "calendar" | "catalyst";
 
 // "Who pays whom" and "What breaks first" live under one "AI Overview" top-level tab as
 // sub-tabs, rather than each taking a top-level slot next to Markets/Movers/Calendar.
@@ -46,6 +47,7 @@ const TABS: TabDef[] = [
   { kind: "single", view: "markets", label: "Markets" },
   { kind: "single", view: "movers", label: "Daily movers" },
   { kind: "single", view: "opportunities", label: "Opportunities" },
+  { kind: "single", view: "evaluator", label: "Evaluator" },
   { kind: "single", view: "trading", label: "Trade Desk" },
   { kind: "single", view: "backtest", label: "Fast Rotation" },
   { kind: "single", view: "calendar", label: "Earnings calendar" },
@@ -333,6 +335,10 @@ export default function IndustryMap() {
         {view === "opportunities" && (
           <OpportunitiesScreener onSelectNode={selectNode} onOpenStock={setStockSymbol} />
         )}
+      </section>
+
+      <section className={`insight ${view === "evaluator" ? "active" : ""}`}>
+        {view === "evaluator" && <StockEvaluator quotes={quotes} onOpenStock={setStockSymbol} />}
       </section>
 
       <section className={`insight ${view === "trading" ? "active" : ""}`}>
