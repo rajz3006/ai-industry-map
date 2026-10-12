@@ -833,6 +833,42 @@ export const nodes: MapNode[] = [
     "desc": "Global PC maker turned major AI-server ODM through its Infrastructure Solutions Group, building Nvidia GPU-based systems for hyperscale and enterprise customers.",
     "fact": "Q1 FY2027 revenue hit a record $26.94B, up 43% YoY; Infrastructure Solutions Group revenue rose 98% YoY to $8.5B and the AI server pipeline reached $54B.",
     "src": "lenovoAI"
+  },
+  {
+    "id": "apollo",
+    "name": "Apollo Global Management",
+    "layer": "Cloud & compute",
+    "sub": "Alternative asset manager · credit",
+    "desc": "Alternative asset manager emerging as one of the most active arrangers of AI-infrastructure debt, in reported talks to finance OpenAI's custom chips (via Broadcom), Oracle's Nvidia chip purchase, and SpaceX's ~$40B raise.",
+    "fact": "Expected to lead SpaceX's ~$40B chip financing for Nvidia chips, with a close eyed in 2027; also in talks on the $50B+ OpenAI package and Oracle's chip purchase.",
+    "src": "wsjChipFinancing"
+  },
+  {
+    "id": "blackstone",
+    "name": "Blackstone",
+    "layer": "Cloud & compute",
+    "sub": "Alternative asset manager · credit",
+    "desc": "The world's largest alternative asset manager, approached as a lender across the reported AI-chip financing wave.",
+    "fact": "Committed ~$9B to the $18B junior tranche of the reported $60B Broadcom–Anthropic chip-financing package; also approached on Broadcom's $50B+ OpenAI chip financing.",
+    "src": "anthropicFinancingFT"
+  },
+  {
+    "id": "pimco",
+    "name": "PIMCO",
+    "layer": "Cloud & compute",
+    "sub": "Bond manager · credit",
+    "desc": "Major bond manager in reported talks to help finance SpaceX's Nvidia chip purchase.",
+    "fact": "In talks to join the lender group for SpaceX's ~$40B Nvidia chip financing, alongside Apollo.",
+    "src": "ftSpaceX40B"
+  },
+  {
+    "id": "goldmansachs",
+    "name": "Goldman Sachs",
+    "layer": "Cloud & compute",
+    "sub": "Investment bank · financing",
+    "desc": "Investment bank in reported talks with Apollo on arranging financing for Oracle's large Nvidia chip purchase.",
+    "fact": "In talks with Apollo to arrange money for Oracle's Nvidia chip purchase, per WSJ reporting on the Oct 2026 financing wave.",
+    "src": "wsjChipFinancing"
   }
 ];
 
@@ -1772,6 +1808,70 @@ export const edges: MapEdge[] = [
     "label": "In talks to invest at $30B+ valuation; Perplexity runs agents on Nvidia Vera",
     "cite": "The Information / Yahoo Finance · Aug 23, 2026",
     "id": "e116"
+  },
+  {
+    "from": "apollo",
+    "to": "openai",
+    "type": "money",
+    "label": "Lender in talks on $50B+ financing for OpenAI's custom chips (reported, early talks)",
+    "cite": "WSJ · Oct 7, 2026",
+    "id": "e117"
+  },
+  {
+    "from": "blackstone",
+    "to": "openai",
+    "type": "money",
+    "label": "Lender approached on $50B+ OpenAI chip financing (reported, early talks)",
+    "cite": "WSJ · Oct 7, 2026",
+    "id": "e118"
+  },
+  {
+    "from": "apollo",
+    "to": "oracle",
+    "type": "money",
+    "label": "In talks on financing Oracle's Nvidia chip purchase (reported)",
+    "cite": "WSJ · Oct 7, 2026",
+    "id": "e119"
+  },
+  {
+    "from": "goldmansachs",
+    "to": "oracle",
+    "type": "money",
+    "label": "In talks with Apollo on Oracle chip-purchase financing (reported)",
+    "cite": "WSJ · Oct 7, 2026",
+    "id": "e120"
+  },
+  {
+    "from": "apollo",
+    "to": "xai",
+    "type": "money",
+    "label": "Expected to lead ~$40B SpaceX raise for Nvidia chips; 2027 close eyed (reported)",
+    "cite": "FT via The Times · Oct 2026",
+    "id": "e121"
+  },
+  {
+    "from": "pimco",
+    "to": "xai",
+    "type": "money",
+    "label": "In talks to help finance SpaceX's ~$40B Nvidia chip purchase (reported)",
+    "cite": "FT via The Times · Oct 2026",
+    "id": "e122"
+  },
+  {
+    "from": "blackstone",
+    "to": "anthropic",
+    "type": "money",
+    "label": "~$9B committed to junior tranche of $60B chip-financing package (reported)",
+    "cite": "FT · Oct 2026",
+    "id": "e123"
+  },
+  {
+    "from": "broadcom",
+    "to": "anthropic",
+    "type": "money",
+    "label": "Up to $42B convertible-note chip financing agreed; junior tranche flagged as conflict risk (reported)",
+    "cite": "Reuters · Oct 2026",
+    "id": "e124"
   }
 ];
 
@@ -1815,7 +1915,11 @@ export const columns: MapColumn[] = [
       "togetherai",
       "iren",
       "lambdaai",
-      "nscale"
+      "nscale",
+      "apollo",
+      "blackstone",
+      "pimco",
+      "goldmansachs"
     ]
   },
   {
@@ -2165,6 +2269,22 @@ export const sources: Record<string, SourceRef> = {
   "lenovoAI": {
     "label": "InfotechLead · 2026",
     "url": "https://infotechlead.com/networking/lenovo-revenue-jumps-43-to-26-94-bn-as-ai-server-pipeline-hits-54-bn-97687"
+  },
+  "wsjChipFinancing": {
+    "label": "WSJ · Oct 7, 2026",
+    "url": "https://www.wsj.com/tech/oracle-broadcom-and-spacex-seek-blockbuster-debt-deals-to-pay-for-ai-chips-848e8032"
+  },
+  "ftSpaceX40B": {
+    "label": "FT via The Times · Oct 2026",
+    "url": "https://www.thetimes.com/business/technology/article/spacex-seeks-40bn-nvidia-ai-chips-q7325bxpf"
+  },
+  "anthropicFinancingFT": {
+    "label": "FT · Oct 2026",
+    "url": "https://www.tradersunion.com/news/financial-news/show/3672083/broadcom-ai-chip-financing-60bn/"
+  },
+  "anthropicFinancingReuters": {
+    "label": "Reuters · Oct 2026",
+    "url": "https://www.rdworldonline.com/broadcom-lines-up-60-billion-as-suppliers-finance-the-frontier-labs-compute/"
   }
 };
 
