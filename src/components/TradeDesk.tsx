@@ -5,8 +5,8 @@ import { useOpportunities } from "@/hooks/useOpportunities";
 import { useTradingAccount } from "@/hooks/useTradingAccount";
 import { useTradingPositions } from "@/hooks/useTradingPositions";
 import { useTradeJournal, type TradeJournalStatus } from "@/hooks/useTradeJournal";
+import { useCompanyNews } from "@/hooks/useCompanyNews";
 import type { OpportunityRow } from "@/app/api/opportunities/route";
-import type { NewsResult } from "@/app/api/news/route";
 import { buildTradeSetup } from "@/lib/tradeSizing";
 import { changeDirection, formatChangePercent, formatPrice, formatRelativeTime, isForeignDenominated } from "@/lib/format";
 
@@ -41,7 +41,7 @@ export default function TradeDesk() {
   const [riskPct, setRiskPct] = useState(DEFAULT_RISK_PCT);
   const [reasonNotes, setReasonNotes] = useState("");
   const [newsFor, setNewsFor] = useState<string | null>(null);
-  const [newsCache, setNewsCache] = useState<Record<string, NewsResult | "loading" | "error">>({});
+  const { data: newsData, loading: newsLoading, error: newsError } = useCompanyNews(newsFor);
   const [closingSymbol, setClosingSymbol] = useState<string | null>(null);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -74,21 +74,8 @@ export default function TradeDesk() {
     return buildTradeSetup(selectedRow, equity, riskPct);
   }, [selectedRow, equity, riskPct]);
 
-  async function toggleNews(symbol: string) {
-    if (newsFor === symbol) {
-      setNewsFor(null);
-      return;
-    }
-    setNewsFor(symbol);
-    if (newsCache[symbol]) return;
-    setNewsCache((prev) => ({ ...prev, [symbol]: "loading" }));
-    try {
-      const res = await fetch(`/api/news?symbol=${encodeURIComponent(symbol)}`);
-      const body = await res.json();
-      setNewsCache((prev) => ({ ...prev, [symbol]: body?.error ? "error" : (body as NewsResult) }));
-    } catch {
-      setNewsCache((prev) => ({ ...prev, [symbol]: "error" }));
-    }
+  function toggleNews(symbol: string) {
+    setNewsFor((prev) => (prev === symbol ? null : symbol));
   }
 
   function selectRow(symbol: string) {
@@ -370,18 +357,16 @@ export default function TradeDesk() {
               </button>
               {newsFor === selectedRow.symbol && (
                 <div className="mv-news-list">
-                  {newsCache[selectedRow.symbol] === "loading" && <p className="mv-empty">Loading headlines…</p>}
-                  {newsCache[selectedRow.symbol] === "error" && (
+                  {newsLoading && !newsData && <p className="mv-empty">Loading headlines…</p>}
+                  {newsError && !newsData && (
                     <p className="mv-empty">Couldn&rsquo;t load headlines for {selectedRow.symbol}.</p>
                   )}
-                  {(() => {
-                    const news = newsCache[selectedRow.symbol];
-                    if (!news || news === "loading" || news === "error") return null;
-                    return news.articles.length === 0 ? (
+                  {newsData && (
+                    newsData.articles.length === 0 ? (
                       <p className="mv-empty">No recent headlines found.</p>
                     ) : (
                       <ul>
-                        {news.articles.slice(0, 3).map((a) => (
+                        {newsData.articles.slice(0, 3).map((a) => (
                           <li key={a.url}>
                             <a href={a.url} target="_blank" rel="noopener noreferrer">
                               {a.headline}
@@ -390,8 +375,8 @@ export default function TradeDesk() {
                           </li>
                         ))}
                       </ul>
-                    );
-                  })()}
+                    )
+                  )}
                 </div>
               )}
 

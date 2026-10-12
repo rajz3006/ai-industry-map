@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { NewsArticle, NewsResult } from "@/app/api/news/route";
+import { useEffect } from "react";
+import { useCompanyNews } from "@/hooks/useCompanyNews";
 
 const REFRESH_MS = 30 * 60 * 1000;
 
@@ -17,49 +17,21 @@ function timeAgo(unixSeconds: number): string {
 }
 
 /**
- * Self-refreshing per-node news feed. Polls /api/news every 30 minutes while mounted;
- * shows provider attribution and the last-refresh time so staleness is explicit.
+ * Self-refreshing per-node news feed. Shares its fetch and cache with every other
+ * component reading the same symbol's news via useCompanyNews, and polls (refresh())
+ * every 30 minutes while mounted; shows provider attribution and the last-refresh time
+ * so staleness is explicit.
  */
 export default function NodeNews({ symbol, companyName }: { symbol: string | null; companyName: string }) {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [fetchedAt, setFetchedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  // Guards against a slow earlier request (auto-refresh or a prior manual click)
-  // clobbering a newer one's result once both resolve out of order.
-  const requestIdRef = useRef(0);
-
-  const load = useCallback(async (sym: string) => {
-    const id = ++requestIdRef.current;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/news?symbol=${encodeURIComponent(sym)}`);
-      const json = (await res.json()) as NewsResult & { error?: string };
-      if (requestIdRef.current !== id) return;
-      if (!res.ok || json.error) {
-        setError(json.error || `News request failed (${res.status})`);
-        setArticles([]);
-      } else {
-        setArticles(json.articles ?? []);
-        setFetchedAt(json.fetchedAt ?? null);
-        setError(null);
-      }
-    } catch (err) {
-      if (requestIdRef.current !== id) return;
-      setError(err instanceof Error ? err.message : "News feed unreachable");
-      setArticles([]);
-    } finally {
-      if (requestIdRef.current === id) setLoading(false);
-    }
-  }, []);
+  const { data, loading, error, refresh } = useCompanyNews(symbol);
+  const articles = data?.articles ?? [];
+  const fetchedAt = data?.fetchedAt ?? null;
 
   useEffect(() => {
     if (!symbol) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(symbol);
-    const interval = setInterval(() => load(symbol), REFRESH_MS);
+    const interval = setInterval(() => refresh(), REFRESH_MS);
     return () => clearInterval(interval);
-  }, [symbol, load]);
+  }, [symbol, refresh]);
 
   return (
     <div className="news-block">
@@ -75,7 +47,7 @@ export default function NodeNews({ symbol, companyName }: { symbol: string | nul
             <button
               type="button"
               className="news-refresh"
-              onClick={() => load(symbol)}
+              onClick={() => refresh()}
               disabled={loading}
               aria-label="Refresh news now"
               title="Refresh news now"

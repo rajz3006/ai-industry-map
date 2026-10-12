@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useOpportunities } from "@/hooks/useOpportunities";
+import { useCompanyNews } from "@/hooks/useCompanyNews";
 import type { OpportunityRow } from "@/app/api/opportunities/route";
-import type { NewsResult } from "@/app/api/news/route";
 import { changeDirection, formatChangePercent, formatPrice, isForeignDenominated } from "@/lib/format";
 
 type SortKey = "zScore" | "changePercent" | "edgeCount" | "upsidePct";
@@ -39,27 +39,14 @@ export default function OpportunitiesScreener({
   const [sortKey, setSortKey] = useState<SortKey>("zScore");
 
   const [newsFor, setNewsFor] = useState<string | null>(null);
-  const [newsCache, setNewsCache] = useState<Record<string, NewsResult | "loading" | "error">>({});
+  const { data: newsData, loading: newsLoading, error: newsError } = useCompanyNews(newsFor);
 
   const [calcSymbol, setCalcSymbol] = useState<string | null>(null);
   const [capital, setCapital] = useState(5000);
   const [maxRiskPct, setMaxRiskPct] = useState(1);
 
-  async function toggleNews(symbol: string) {
-    if (newsFor === symbol) {
-      setNewsFor(null);
-      return;
-    }
-    setNewsFor(symbol);
-    if (newsCache[symbol]) return;
-    setNewsCache((prev) => ({ ...prev, [symbol]: "loading" }));
-    try {
-      const res = await fetch(`/api/news?symbol=${encodeURIComponent(symbol)}`);
-      const body = await res.json();
-      setNewsCache((prev) => ({ ...prev, [symbol]: body?.error ? "error" : (body as NewsResult) }));
-    } catch {
-      setNewsCache((prev) => ({ ...prev, [symbol]: "error" }));
-    }
+  function toggleNews(symbol: string) {
+    setNewsFor((prev) => (prev === symbol ? null : symbol));
   }
 
   const filteredSorted = useMemo(() => {
@@ -227,7 +214,6 @@ export default function OpportunitiesScreener({
           <ul className="op-list">
             {filteredSorted.length === 0 && <p className="op-empty">No names clear these filters right now.</p>}
             {filteredSorted.map((r) => {
-              const news = newsCache[r.symbol];
               return (
                 <li key={r.symbol} className="op-row">
                   <div className="op-row-top">
@@ -260,14 +246,16 @@ export default function OpportunitiesScreener({
                   </div>
                   {newsFor === r.symbol && (
                     <div className="mv-news-list">
-                      {news === "loading" && <p className="mv-empty">Loading headlines…</p>}
-                      {news === "error" && <p className="mv-empty">Couldn&rsquo;t load headlines for {r.symbol}.</p>}
-                      {news && news !== "loading" && news !== "error" && (
-                        news.articles.length === 0 ? (
+                      {newsLoading && !newsData && <p className="mv-empty">Loading headlines…</p>}
+                      {newsError && !newsData && (
+                        <p className="mv-empty">Couldn&rsquo;t load headlines for {r.symbol}.</p>
+                      )}
+                      {newsData && (
+                        newsData.articles.length === 0 ? (
                           <p className="mv-empty">No recent headlines found.</p>
                         ) : (
                           <ul>
-                            {news.articles.slice(0, 3).map((a) => (
+                            {newsData.articles.slice(0, 3).map((a) => (
                               <li key={a.url}>
                                 <a href={a.url} target="_blank" rel="noopener noreferrer">
                                   {a.headline}

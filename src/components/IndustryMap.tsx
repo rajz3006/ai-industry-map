@@ -390,6 +390,8 @@ export default function IndustryMap() {
             setAlertSymbol(sym);
             setAlertsOpen(true);
           }}
+          quotes={quotes}
+          earnings={earnings}
         />
       )}
       <AlertsPanel

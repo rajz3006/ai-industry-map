@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSharedResource } from "@/hooks/useSharedResource";
 import type { OpportunitiesResponse } from "@/app/api/opportunities/route";
 
 export interface UseOpportunitiesResult {
@@ -9,43 +9,27 @@ export interface UseOpportunitiesResult {
   error: string | null;
 }
 
+// /api/opportunities layers an 18h price-target cache on top of loadBarSet()'s 15-minute
+// bar cache (see src/lib/moversData.ts), but the bar data is what actually changes most
+// often in the response, so that's the window we match here.
+const STALE_MS = 15 * 60_000;
+
+async function fetchOpportunities(): Promise<OpportunitiesResponse> {
+  const res = await fetch("/api/opportunities");
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body?.error ?? `Request failed (${res.status})`);
+  }
+  return body as OpportunitiesResponse;
+}
+
 /** Fetches the dip-screener rows (z-score vs. own trailing volatility, structural centrality,
- * optional analyst upside) once per mount — same pattern as useMoversSignals. */
+ * optional analyst upside). Shared across every caller via useSharedResource keyed on
+ * "opportunities" — OpportunitiesScreener and TradeDesk both mount this hook, and the second
+ * one to mount reuses the first's cached fetch instead of firing a new request. */
 export function useOpportunities(): UseOpportunitiesResult {
-  const [data, setData] = useState<OpportunitiesResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/opportunities", { signal: controller.signal });
-        const body = await res.json();
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(body?.error ?? `Request failed (${res.status})`);
-        } else {
-          setData(body as OpportunitiesResponse);
-        }
-      } catch (err) {
-        if (cancelled || controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, []);
-
+  const { data, loading, error } = useSharedResource<OpportunitiesResponse>("opportunities", fetchOpportunities, {
+    staleMs: STALE_MS,
+  });
   return { data, loading, error };
 }

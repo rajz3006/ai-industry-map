@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useMoversSignals } from "@/hooks/useMoversSignals";
 import { nextEarningsDate } from "@/hooks/useEarnings";
+import { useCompanyNews } from "@/hooks/useCompanyNews";
 import type { EarningsMap } from "@/app/api/earnings/route";
-import type { NewsResult } from "@/app/api/news/route";
 import { changeDirection, formatChangePercent } from "@/lib/format";
 
 function fmtShortDate(iso: string): string {
@@ -42,23 +42,10 @@ export default function SignalsPanel({
 }) {
   const { data, loading, error } = useMoversSignals();
   const [newsFor, setNewsFor] = useState<string | null>(null);
-  const [newsCache, setNewsCache] = useState<Record<string, NewsResult | "loading" | "error">>({});
+  const { data: newsData, loading: newsLoading, error: newsError } = useCompanyNews(newsFor);
 
-  async function toggleNews(symbol: string) {
-    if (newsFor === symbol) {
-      setNewsFor(null);
-      return;
-    }
-    setNewsFor(symbol);
-    if (newsCache[symbol]) return;
-    setNewsCache((prev) => ({ ...prev, [symbol]: "loading" }));
-    try {
-      const res = await fetch(`/api/news?symbol=${encodeURIComponent(symbol)}`);
-      const body = await res.json();
-      setNewsCache((prev) => ({ ...prev, [symbol]: body?.error ? "error" : (body as NewsResult) }));
-    } catch {
-      setNewsCache((prev) => ({ ...prev, [symbol]: "error" }));
-    }
+  function toggleNews(symbol: string) {
+    setNewsFor((prev) => (prev === symbol ? null : symbol));
   }
 
   const combined: WeeklyRow[] = data ? [...data.weeklyLeaders, ...data.weeklyLaggards] : [];
@@ -102,7 +89,6 @@ export default function SignalsPanel({
           <ul className="mv-signal-list">
             {combined.map((r) => {
               const earningsDate = nextEarningsDate(earnings, () => r.symbol);
-              const news = newsCache[r.symbol];
               return (
                 <li key={r.symbol} className="mv-signal-row">
                   <div className="mv-signal-top">
@@ -123,14 +109,16 @@ export default function SignalsPanel({
                   </div>
                   {newsFor === r.symbol && (
                     <div className="mv-news-list">
-                      {news === "loading" && <p className="mv-empty">Loading headlines…</p>}
-                      {news === "error" && <p className="mv-empty">Couldn&rsquo;t load headlines for {r.symbol}.</p>}
-                      {news && news !== "loading" && news !== "error" && (
-                        news.articles.length === 0 ? (
+                      {newsLoading && !newsData && <p className="mv-empty">Loading headlines…</p>}
+                      {newsError && !newsData && (
+                        <p className="mv-empty">Couldn&rsquo;t load headlines for {r.symbol}.</p>
+                      )}
+                      {newsData && (
+                        newsData.articles.length === 0 ? (
                           <p className="mv-empty">No recent headlines found.</p>
                         ) : (
                           <ul>
-                            {news.articles.slice(0, 3).map((a) => (
+                            {newsData.articles.slice(0, 3).map((a) => (
                               <li key={a.url}>
                                 <a href={a.url} target="_blank" rel="noopener noreferrer">
                                   {a.headline}

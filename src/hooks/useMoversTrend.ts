@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSharedResource } from "@/hooks/useSharedResource";
 import type { Period, TrendMoversResponse } from "@/app/api/movers/trend/route";
 
 export interface UseMoversTrendResult {
@@ -9,44 +9,25 @@ export interface UseMoversTrendResult {
   error: string | null;
 }
 
-/** Fetches cumulative leaders/laggards + per-category trend lines for a trailing period. */
+// /api/movers/trend has no cache layer of its own — it reads straight from loadBarSet(),
+// whose in-process cache is good for 15 minutes (src/lib/moversData.ts).
+const STALE_MS = 15 * 60_000;
+
+async function fetchMoversTrend(period: Period): Promise<TrendMoversResponse> {
+  const res = await fetch(`/api/movers/trend?period=${encodeURIComponent(period)}`);
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body?.error ?? `Request failed (${res.status})`);
+  }
+  return body as TrendMoversResponse;
+}
+
+/** Fetches cumulative leaders/laggards + per-category trend lines for a trailing period.
+ * Shared across every caller via useSharedResource keyed on `moversTrend:<period>`. */
 export function useMoversTrend(period: Period): UseMoversTrendResult {
-  const [data, setData] = useState<TrendMoversResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/movers/trend?period=${encodeURIComponent(period)}`, {
-          signal: controller.signal,
-        });
-        const body = await res.json();
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(body?.error ?? `Request failed (${res.status})`);
-        } else {
-          setData(body as TrendMoversResponse);
-        }
-      } catch (err) {
-        if (cancelled || controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [period]);
-
+  const key = `moversTrend:${period}`;
+  const { data, loading, error } = useSharedResource<TrendMoversResponse>(key, () => fetchMoversTrend(period), {
+    staleMs: STALE_MS,
+  });
   return { data, loading, error };
 }

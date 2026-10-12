@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSharedResource } from "@/hooks/useSharedResource";
 import type { MoversSignalsResponse } from "@/app/api/movers/signals/route";
 
 export interface UseMoversSignalsResult {
@@ -9,42 +9,24 @@ export interface UseMoversSignalsResult {
   error: string | null;
 }
 
-/** Fetches week-over-week category momentum + weekly leaders/laggards, once per mount. */
+// /api/movers/signals has no cache layer of its own — it reads straight from loadBarSet(),
+// whose in-process cache is good for 15 minutes (src/lib/moversData.ts).
+const STALE_MS = 15 * 60_000;
+
+async function fetchMoversSignals(): Promise<MoversSignalsResponse> {
+  const res = await fetch("/api/movers/signals");
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(body?.error ?? `Request failed (${res.status})`);
+  }
+  return body as MoversSignalsResponse;
+}
+
+/** Fetches week-over-week category momentum + weekly leaders/laggards. Shared across every
+ * caller via useSharedResource keyed on "moversSignals". */
 export function useMoversSignals(): UseMoversSignalsResult {
-  const [data, setData] = useState<MoversSignalsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/movers/signals", { signal: controller.signal });
-        const body = await res.json();
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(body?.error ?? `Request failed (${res.status})`);
-        } else {
-          setData(body as MoversSignalsResponse);
-        }
-      } catch (err) {
-        if (cancelled || controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, []);
-
+  const { data, loading, error } = useSharedResource<MoversSignalsResponse>("moversSignals", fetchMoversSignals, {
+    staleMs: STALE_MS,
+  });
   return { data, loading, error };
 }

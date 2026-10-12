@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AreaSeries, createChart, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import type { ProfileResult } from "@/app/api/profile/route";
 import type { CandlesResult, Range } from "@/app/api/candles/route";
-import type { EarningsResult } from "@/app/api/earnings/route";
-import type { QuoteResult } from "@/app/api/quote/route";
+import type { EarningsMap } from "@/app/api/earnings/route";
+import type { QuoteMap } from "@/hooks/useQuotes";
 import EarningsResearch from "@/components/EarningsResearch";
 import NodeNews from "@/components/NodeNews";
 import { computeTechnicals, SIGNAL_COPY } from "@/lib/technicals";
@@ -51,18 +51,20 @@ export default function StockDetail({
   symbol,
   onClose,
   onSetAlert,
+  quotes,
+  earnings,
 }: {
   symbol: string;
   onClose: () => void;
   onSetAlert?: (symbol: string) => void;
+  quotes: QuoteMap;
+  earnings: EarningsMap;
 }) {
   const [range, setRange] = useState<Range>("1M");
   const [theme] = useTheme();
   const chartColors = CHART_THEME[theme];
-  const quote = useApi<QuoteResult>(`/api/quote?symbols=${symbol}`);
   const profile = useApi<ProfileResult>(`/api/profile?symbol=${symbol}`);
   const candles = useApi<CandlesResult>(`/api/candles?symbol=${symbol}&range=${range}`);
-  const earnings = useApi<EarningsResult>(`/api/earnings?symbol=${symbol}`);
   // Dedicated 1Y daily series for technical signals, independent of the chart range.
   const techCandles = useApi<CandlesResult>(`/api/candles?symbol=${symbol}&range=1Y`);
   const technicals = useMemo(
@@ -70,8 +72,17 @@ export default function StockDetail({
     [techCandles.data]
   );
 
-  const quoteData = quote.data && (quote.data as unknown as Record<string, QuoteResult | { error: string }>)[symbol];
-  const liveQuote = quoteData && !("error" in quoteData) ? (quoteData as QuoteResult) : undefined;
+  // quotes/earnings are the shared, globally-polled maps from IndustryMap — no entry yet
+  // (before the first poll cycle completes) is a loading state, not an error.
+  const quoteEntry = quotes[symbol];
+  const quoteLoading = !quoteEntry;
+  const quoteError = quoteEntry && "error" in quoteEntry ? quoteEntry.error : undefined;
+  const liveQuote = quoteEntry && !("error" in quoteEntry) ? quoteEntry : undefined;
+
+  const earningsEntry = earnings[symbol];
+  const earningsLoading = !earningsEntry;
+  const earningsError = earningsEntry && "error" in earningsEntry ? earningsEntry.error : undefined;
+  const earningsData = earningsEntry && !("error" in earningsEntry) ? earningsEntry : undefined;
 
   const chartRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
@@ -147,7 +158,7 @@ export default function StockDetail({
           <h2>{name}</h2>
           <div className="exch-line">
             {symbol} · {profile.data?.exchange || "—"}
-            {quote.loading && <span className="live-badge">loading…</span>}
+            {quoteLoading && <span className="live-badge">loading…</span>}
           </div>
         </div>
 
@@ -160,7 +171,7 @@ export default function StockDetail({
           </>
         ) : (
           <div className="unavailable-note">
-            {quoteData && "error" in quoteData ? quoteData.error : "Live price unavailable."}
+            {quoteLoading ? "Loading live price…" : quoteError || "Live price unavailable."}
           </div>
         )}
         {onSetAlert && (
@@ -213,18 +224,20 @@ export default function StockDetail({
 
         <div className="earnings-block">
           <h3>Earnings</h3>
-          {earnings.error ? (
-            <div className="unavailable-note">{earnings.error}</div>
+          {earningsLoading ? (
+            <div className="unavailable-note">Loading earnings…</div>
+          ) : earningsError ? (
+            <div className="unavailable-note">{earningsError}</div>
           ) : (
             <>
               <div className="earn-row">
                 <b>Previous report</b>
-                {earnings.data?.previous ? (
+                {earningsData?.previous ? (
                   <span>
-                    {formatDate(earnings.data.previous.date)} — EPS{" "}
-                    {earnings.data.previous.epsActual ?? "—"} actual vs {earnings.data.previous.epsEstimate ?? "—"} est.
-                    {typeof earnings.data.previous.surprisePercent === "number" &&
-                      ` (${earnings.data.previous.surprisePercent >= 0 ? "+" : ""}${earnings.data.previous.surprisePercent.toFixed(1)}% surprise)`}
+                    {formatDate(earningsData.previous.date)} — EPS{" "}
+                    {earningsData.previous.epsActual ?? "—"} actual vs {earningsData.previous.epsEstimate ?? "—"} est.
+                    {typeof earningsData.previous.surprisePercent === "number" &&
+                      ` (${earningsData.previous.surprisePercent >= 0 ? "+" : ""}${earningsData.previous.surprisePercent.toFixed(1)}% surprise)`}
                   </span>
                 ) : (
                   <span>No recent report found.</span>
@@ -232,14 +245,14 @@ export default function StockDetail({
               </div>
               <div className="earn-row">
                 <b>Next estimated report</b>
-                {earnings.data?.next ? (
-                  <span>{formatDate(earnings.data.next.date)}</span>
+                {earningsData?.next ? (
+                  <span>{formatDate(earningsData.next.date)}</span>
                 ) : (
                   <span>No upcoming date on the calendar yet.</span>
                 )}
               </div>
-              {earnings.data?.next && earnings.data.next.date <= "2026-12-31" && (
-                <EarningsResearch symbol={symbol} nextDate={earnings.data.next.date} />
+              {earningsData?.next && earningsData.next.date <= "2026-12-31" && (
+                <EarningsResearch symbol={symbol} nextDate={earningsData.next.date} />
               )}
             </>
           )}
