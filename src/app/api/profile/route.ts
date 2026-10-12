@@ -1,29 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cacheGet, cacheSet, finnhubGet, getFinnhubKey } from "@/lib/finnhub";
+import { getFinnhubKey } from "@/lib/finnhub";
+import { fetchCompanyProfile, type CompanyProfile } from "@/lib/companyProfile";
 
-export interface ProfileResult {
-  name: string;
-  logo: string;
-  industry: string;
-  marketCapitalization: number;
-  ipo: string;
-  weburl: string;
-  exchange: string;
-  currency: string;
-}
-
-type FinnhubProfile = {
-  name?: string;
-  logo?: string;
-  finnhubIndustry?: string;
-  marketCapitalization?: number;
-  ipo?: string;
-  weburl?: string;
-  exchange?: string;
-  currency?: string;
-};
-
-const CACHE_TTL_MS = 60 * 60 * 1000; // profile data is slow-moving; cache 1h per instance
+export type ProfileResult = CompanyProfile;
 
 export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get("symbol")?.trim().toUpperCase();
@@ -37,33 +16,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const cacheKey = `profile:${symbol}`;
-  const cached = cacheGet<ProfileResult>(cacheKey);
-  if (cached) {
-    return NextResponse.json(cached, {
-      headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=600" },
-    });
-  }
-
   try {
-    const p = await finnhubGet<FinnhubProfile>("/stock/profile2", { symbol });
-    if (!p || !p.name) {
+    const result = await fetchCompanyProfile(symbol);
+    if (!result) {
       return NextResponse.json(
         { error: "No profile data returned for symbol" },
         { headers: { "Cache-Control": "s-maxage=60" } }
       );
     }
-    const result: ProfileResult = {
-      name: p.name ?? symbol,
-      logo: p.logo ?? "",
-      industry: p.finnhubIndustry ?? "",
-      marketCapitalization: p.marketCapitalization ?? 0,
-      ipo: p.ipo ?? "",
-      weburl: p.weburl ?? "",
-      exchange: p.exchange ?? "",
-      currency: p.currency ?? "USD",
-    };
-    cacheSet(cacheKey, result, CACHE_TTL_MS);
     return NextResponse.json(result, {
       headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=600" },
     });

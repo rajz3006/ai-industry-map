@@ -35,6 +35,12 @@ const SPECULATIVE_HEADLINE_PATTERNS = [
   /^top \d+[\s\S]*\bstocks\b/i,
   /\bis\s.+\s(a buy|a sell)\b/i,
   /\b\d+\s+stocks?\b.*\bto (buy|sell)\b/i,
+  // Recurring multi-company digest formats (e.g. "Zacks Investment Ideas feature
+  // highlights: Meta Platform, NVIDIA, Palantir, Cisco..."). These pass a per-company
+  // relevance check because the target company is named among several others, but the
+  // headline isn't actually *about* any one of them — exclude by format, not by content.
+  /\bfeatures?d? highlights?\b/i,
+  /\bstocks? to watch\b/i,
 ];
 
 export function isSpeculativeHeadline(headline: string): boolean {

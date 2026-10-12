@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFinnhubKey } from "@/lib/finnhub";
-import { fetchCompanyNews } from "@/lib/companyNews";
+import { fetchTrustedCompanyNews } from "@/lib/companyNews";
 
 export interface NewsArticle {
   headline: string;
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await fetchCompanyNews(symbol);
+    const result = await fetchTrustedCompanyNews(symbol);
     return NextResponse.json(result, {
       headers: { "Cache-Control": "s-maxage=900, stale-while-revalidate=1800" },
     });

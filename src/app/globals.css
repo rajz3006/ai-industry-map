@@ -1732,11 +1732,30 @@ table.mk-table {
   margin-bottom: 8px;
 }
 .news-head h3 { font-size: 14px; margin: 0; color: var(--heading-sub); }
+.news-head-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
 .news-updated {
   font: 400 10px "DM Mono", monospace;
   color: var(--dim);
   white-space: nowrap;
 }
+.news-refresh {
+  font: 600 10px "DM Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--focus);
+  background: none;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.news-refresh:hover:not(:disabled) { background: var(--line); }
+.news-refresh:disabled { opacity: 0.6; cursor: default; }
 .news-list {
   list-style: none;
   margin: 0;

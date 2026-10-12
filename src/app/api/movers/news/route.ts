@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AlpacaError } from "@/lib/alpaca";
-import { cacheGet, cacheSet, getFinnhubKey } from "@/lib/finnhub";
+import { cacheGet, cacheSet } from "@/lib/finnhub";
 import { loadBarSet, resolveSessionDate, computeSessionMovers, type CategoryTrend } from "@/lib/moversData";
-import { fetchCompanyNews } from "@/lib/companyNews";
-import { fetchYahooRssNews } from "@/lib/yahooRss";
-import { isTrustedFinnhubSource, isTrustedYahooLink, isSpeculativeHeadline } from "@/lib/trustedNews";
+import { fetchTrustedCompanyNews } from "@/lib/companyNews";
 import type { NewsArticle } from "@/app/api/news/route";
 
 // Enough names per side to surface a real theme without burning the shared Finnhub
@@ -38,27 +36,10 @@ function pickTopTheme(categoryTrends: CategoryTrend[]): TopTheme | null {
   return candidate;
 }
 
-async function trustedNewsForSymbol(symbol: string): Promise<NewsArticle[]> {
-  const [finnhubResult, rssItems] = await Promise.all([
-    getFinnhubKey() ? fetchCompanyNews(symbol).catch(() => ({ articles: [], fetchedAt: 0 })) : Promise.resolve({ articles: [], fetchedAt: 0 }),
-    fetchYahooRssNews(symbol),
-  ]);
-
-  const fromFinnhub = finnhubResult.articles.filter((a) => isTrustedFinnhubSource(a.source));
-  const fromYahoo: NewsArticle[] = rssItems
-    .filter((it) => isTrustedYahooLink(it.link))
-    .map((it) => ({
-      headline: it.title,
-      source: "Yahoo Finance",
-      datetime: it.datetime,
-      summary: it.description,
-      url: it.link,
-    }));
-  return [...fromFinnhub, ...fromYahoo].filter((a) => !isSpeculativeHeadline(a.headline));
-}
-
 async function trustedNewsForSymbols(symbols: string[]): Promise<NewsArticle[]> {
-  const perSymbol = await Promise.all(symbols.map(trustedNewsForSymbol));
+  const perSymbol = await Promise.all(
+    symbols.map((s) => fetchTrustedCompanyNews(s).then((r) => r.articles).catch(() => [] as NewsArticle[]))
+  );
   const seen = new Set<string>();
   const merged: NewsArticle[] = [];
   for (const list of perSymbol) {
