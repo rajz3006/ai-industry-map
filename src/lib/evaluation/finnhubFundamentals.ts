@@ -7,6 +7,7 @@
 // never throws, returns null fields rather than failing the whole fetch.
 
 import { cacheGet, cacheSet, finnhubGet, getFinnhubKey } from "@/lib/finnhub";
+import type { EvaluateOptions } from "./types";
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4h: TTM/annual figures move slowly, keeps us well under the 50/min shared limiter
 
@@ -51,22 +52,26 @@ export interface FinnhubFundamentals {
  * feature uses. Returns null when FINNHUB_API_KEY is unset or the request fails outright —
  * callers treat null the same way they treat a null FmpFundamentals: fall back further or
  * mark the step "unknown"/neutral. */
-export async function getFinnhubFundamentals(symbol: string, opts: { fast: boolean } = { fast: false }): Promise<FinnhubFundamentals | null> {
+export async function getFinnhubFundamentals(
+  symbol: string,
+  opts: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false }
+): Promise<FinnhubFundamentals | null> {
   if (!getFinnhubKey()) return null;
   const sym = symbol.toUpperCase();
   const cacheKey = `eval:finnhub-fundamentals:${sym}`;
   const cached = cacheGet<FinnhubFundamentals | null>(cacheKey);
   if (cached !== undefined) return cached;
 
-  // Fast/preview mode (bulk evaluation of all 57 symbols): Finnhub's free-tier rate limit is a
-  // SHARED, process-wide 50-calls/60s budget (see finnhub.ts) — live-fetching this endpoint for
-  // every one of 57 symbols in one request (compounded by Step 7's separate /company-news call)
-  // is itself enough to blow well past a 60s serverless ceiling, independent of the SEC Form-4
-  // XML cost this feature's fast mode was originally built to skip. Rather than block a bulk
-  // request on that shared rate limiter, fast mode only uses what's already cached (e.g. from a
-  // prior full single-symbol detail view, or an earlier bulk pass within the 4h TTL) and treats
-  // an uncached symbol the same as "no data" rather than waiting on a live fetch.
-  if (opts.fast) return null;
+  // Bulk evaluation of all 57 symbols: Finnhub's free-tier rate limit is a SHARED, process-wide
+  // 50-calls/60s budget (see finnhub.ts) — live-fetching this endpoint for every one of 57
+  // symbols in one request is itself enough to blow well past a 60s serverless ceiling,
+  // independent of the SEC Form-4 XML cost skipExpensive is built to skip. A caller evaluating a
+  // much smaller candidate set (e.g. Closing Bell, which only evaluates symbols that already
+  // cleared a same-day drop filter) can pass skipLiveFundamentals:false to get real data here —
+  // this is a DIFFERENT knob from skipExpensive specifically so that case is possible; see the
+  // EvaluateOptions doc comment in types.ts for why they used to be one combined flag and why
+  // that was a bug for exactly this kind of smaller-candidate-set caller.
+  if (opts.skipLiveFundamentals) return null;
 
   const pending = inFlight.get(sym);
   if (pending) return pending;

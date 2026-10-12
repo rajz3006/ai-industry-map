@@ -8,23 +8,26 @@
 // compare the buyback dollar figure against — this step surfaces the buyback figure as a
 // capital-return signal, not a timing-quality judgment, and says so in the summary.
 
-import type { StepMetric } from "./types";
+import type { EvaluateOptions, StepMetric } from "./types";
 import { verdictFromScore } from "./types";
 import { getInsiderClusterSignal, getBuybackSignal } from "./managementSignals";
 import type { StepComputation } from "./scoreFinancials";
 
-export async function scoreManagement(symbol: string, opts: { fast: boolean } = { fast: false }): Promise<StepComputation> {
+export async function scoreManagement(
+  symbol: string,
+  opts: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false }
+): Promise<StepComputation> {
   const warnings: string[] = [];
   const metrics: StepMetric[] = [];
   const sources = new Set<string>(["SEC EDGAR Form 4"]);
 
-  // Fast/preview mode (bulk evaluation of all 57 symbols): getInsiderClusterSignal fetches each
-  // Form 4's raw XML individually per symbol to resolve the reporting-owner CIK — this is the
-  // dominant cost of a bulk pass (see src/app/api/evaluate/route.ts). Skip it entirely here and
-  // force this step to "unknown" rather than silently scoring it on buyback data alone, which
-  // would mislabel an incomplete read as a confident one. Full single-symbol detail mode still
-  // runs the real lookup.
-  if (opts.fast) {
+  // skipExpensive (bulk evaluation of all 57 symbols, or any caller that doesn't read Step 5):
+  // getInsiderClusterSignal fetches each Form 4's raw XML individually per symbol to resolve the
+  // reporting-owner CIK — this is the dominant cost of a bulk pass (see
+  // src/app/api/evaluate/route.ts). Skip it entirely here and force this step to "unknown"
+  // rather than silently scoring it on buyback data alone, which would mislabel an incomplete
+  // read as a confident one. Full single-symbol detail mode still runs the real lookup.
+  if (opts.skipExpensive) {
     const buyback = await getBuybackSignal(symbol).catch(() => ({ repurchasedTtm: null, note: "Buyback lookup failed." }));
     metrics.push({
       label: "Insider cluster buy (90d)",

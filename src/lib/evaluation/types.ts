@@ -7,6 +7,33 @@
 
 export type StepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
+// Two independent performance knobs for evaluateSymbol(), deliberately separate rather than
+// one combined "fast" flag (which this feature originally had — see git history). They were
+// coupled together because the Evaluator tab's bulk 57-symbol preview wants both skipped for
+// latency, but a caller evaluating a much smaller candidate set (e.g. Closing Bell, which only
+// evaluates symbols that already cleared a same-day drop filter) can afford live Steps 3/4
+// fundamentals while still skipping the expensive insider lookup it doesn't even read.
+export interface EvaluateOptions {
+  /** Skip Step 5's full insider-cluster XML lookup (forces it "unknown") and Step 7's insider
+   * re-surfacing + live /company-news fetch — the slow, SEC-XML/rate-limit-heavy path. Does
+   * NOT affect Steps 3/4. */
+  skipExpensive: boolean;
+  /** Skip Steps 3/4's live Finnhub /stock/metric fetch, using only whatever's already cached
+   * (returns "unknown" for an uncached symbol instead of waiting on a live fetch). Set this
+   * independently of skipExpensive — a caller can want live fundamentals (this false) while
+   * still skipping the insider lookup (skipExpensive true), which is exactly what fixed a real
+   * bug: Closing Bell previously used the combined "fast" flag, which silently starved its
+   * fundamentals/valuation gate of live data and made genuinely-dropped stocks vanish from the
+   * screen whenever their Finnhub cache happened to be cold. */
+  skipLiveFundamentals: boolean;
+}
+
+export const FULL_EVAL_OPTIONS: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false };
+// Matches the Evaluator tab's original bulk/"fast" preview behavior exactly.
+export const BULK_PREVIEW_OPTIONS: EvaluateOptions = { skipExpensive: true, skipLiveFundamentals: true };
+// Closing Bell's combination: skip the insider lookup it doesn't read, keep live fundamentals.
+export const LIVE_FUNDAMENTALS_ONLY_OPTIONS: EvaluateOptions = { skipExpensive: true, skipLiveFundamentals: false };
+
 export type StepVerdict = "strong" | "good" | "neutral" | "weak" | "poor" | "unknown";
 
 export interface StepMetric {

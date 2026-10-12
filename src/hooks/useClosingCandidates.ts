@@ -31,12 +31,15 @@ async function fetchClosing(params: string): Promise<ClosingResponse> {
 export function useClosingCandidates(filters: ClosingFilters): UseClosingCandidatesResult {
   const params = useMemo(() => {
     const sp = new URLSearchParams({
+      dropBasis: filters.dropBasis,
       minDrop: String(filters.minDropPct),
+      minZ: String(filters.minZScore),
       minFund: filters.minFundamentals,
+      minVal: filters.minValuation,
       minTech: filters.minTechnicals,
     });
     return sp.toString();
-  }, [filters.minDropPct, filters.minFundamentals, filters.minTechnicals]);
+  }, [filters.dropBasis, filters.minDropPct, filters.minZScore, filters.minFundamentals, filters.minValuation, filters.minTechnicals]);
 
   const fetcher = useCallback(() => fetchClosing(params), [params]);
 

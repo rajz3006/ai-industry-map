@@ -13,7 +13,7 @@
 import { cacheGet, cacheSet, finnhubGet, getFinnhubKey } from "@/lib/finnhub";
 import { fetchRecentFilingsForSymbol } from "@/lib/secFilings";
 import { getInsiderClusterSignal } from "./managementSignals";
-import type { StepMetric } from "./types";
+import type { EvaluateOptions, StepMetric } from "./types";
 import { verdictFromScore } from "./types";
 import type { StepComputation } from "./scoreFinancials";
 
@@ -34,7 +34,10 @@ interface FinnhubNewsItem {
   datetime?: number;
 }
 
-export async function scoreNews(symbol: string, opts: { fast: boolean } = { fast: false }): Promise<StepComputation> {
+export async function scoreNews(
+  symbol: string,
+  opts: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false }
+): Promise<StepComputation> {
   const warnings: string[] = [];
   const metrics: StepMetric[] = [];
   const sources = new Set<string>();
@@ -65,8 +68,8 @@ export async function scoreNews(symbol: string, opts: { fast: boolean } = { fast
     if (cachedCount !== undefined) {
       newsCount = cachedCount;
       sources.add("Finnhub /company-news");
-    } else if (opts.fast) {
-      // Fast/preview mode: same shared-rate-limit rationale as finnhubFundamentals.ts — don't
+    } else if (opts.skipExpensive) {
+      // skipExpensive: same shared-rate-limit rationale as finnhubFundamentals.ts — don't
       // block a 57-symbol bulk pass on a live /company-news call per symbol. Use whatever's
       // already cached (from a prior full detail view or bulk pass) and otherwise skip.
       newsFailed = true;
@@ -89,23 +92,23 @@ export async function scoreNews(symbol: string, opts: { fast: boolean } = { fast
     warnings.push("FINNHUB_API_KEY not set — Step 7 news-coverage count unavailable.");
   }
 
-  // Fast/preview mode: this re-surfaces the same expensive per-Form-4 XML lookup Step 5 skips
-  // (see scoreManagement.ts) — skip it here too rather than paying that cost twice per symbol.
+  // skipExpensive: this re-surfaces the same expensive per-Form-4 XML lookup Step 5 skips (see
+  // scoreManagement.ts) — skip it here too rather than paying that cost twice per symbol.
   // Unlike Step 5, this is only a bonus signal within an otherwise-real step, so Step 7 itself
   // is NOT forced to "unknown" — it's just scored without the insider bonus.
   let insiderFailed = false;
   let insiderSkipped = false;
-  const insider = opts.fast
+  const insider = opts.skipExpensive
     ? (() => {
         insiderSkipped = true;
-        return { clusterBuy: false, buyCount90d: 0, details: "Insider cluster-buy check skipped in preview mode — see full detail for this symbol." };
+        return { clusterBuy: false, buyCount90d: 0, details: "Insider cluster-buy check skipped — see full detail for this symbol." };
       })()
     : await getInsiderClusterSignal(symbol).catch(() => {
         insiderFailed = true;
         return { clusterBuy: false, buyCount90d: 0, details: "Insider lookup failed." };
       });
   if (!insiderFailed && !insiderSkipped) sources.add("SEC EDGAR Form 4");
-  if (insiderSkipped) warnings.push(`Insider cluster-buy re-surfacing skipped in Step 7 preview mode for ${symbol}.`);
+  if (insiderSkipped) warnings.push(`Insider cluster-buy re-surfacing skipped in Step 7 for ${symbol}.`);
 
   if (filingsFailed && newsFailed && insiderFailed) {
     return {

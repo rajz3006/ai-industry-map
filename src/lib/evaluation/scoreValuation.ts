@@ -9,7 +9,7 @@
 // (2:1-3:1 convention) is computed separately in composite.ts, not here — this step is the
 // multiple-based "is the price reasonable" read only.
 
-import type { StepMetric } from "./types";
+import type { EvaluateOptions, StepMetric } from "./types";
 import { verdictFromScore } from "./types";
 import { getFundamentals, type FmpFundamentals } from "@/lib/fmp";
 import { getFinnhubFundamentals, type FinnhubFundamentals } from "./finnhubFundamentals";
@@ -22,7 +22,7 @@ function fmtX(n: number): string {
 export async function scoreValuation(
   symbol: string,
   latestClose: number | null,
-  opts: { fast: boolean } = { fast: false }
+  opts: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false }
 ): Promise<StepComputation> {
   const warnings: string[] = [];
   let fmp: FmpFundamentals | null = null;
@@ -41,8 +41,8 @@ export async function scoreValuation(
   } catch {
     warnings.push(`Finnhub fundamentals lookup threw for ${symbol} — continuing without it.`);
   }
-  if (opts.fast && !finnhub && !fmp) {
-    warnings.push("Finnhub /stock/metric not yet cached for this symbol — skipped in preview mode to avoid the shared rate limit; see full detail.");
+  if (opts.skipLiveFundamentals && !finnhub && !fmp) {
+    warnings.push("Finnhub /stock/metric not yet cached for this symbol — skipped to avoid the shared rate limit; see full detail.");
   }
 
   const peTrailing = fmp?.peTrailing ?? finnhub?.peTTM ?? null;

@@ -14,7 +14,7 @@
 // fallback path is the one actually exercised in practice). If neither provider has anything
 // usable, returns verdict "unknown" at the neutral 2.5 rather than penalizing missing data.
 
-import type { StepMetric, StepVerdict } from "./types";
+import type { EvaluateOptions, StepMetric, StepVerdict } from "./types";
 import { verdictFromScore } from "./types";
 import { getFundamentals, type FmpFundamentals } from "@/lib/fmp";
 import { getFinnhubFundamentals, type FinnhubFundamentals } from "./finnhubFundamentals";
@@ -34,7 +34,10 @@ function fmtPct(n: number | null, digits = 1): string {
   return n === null ? "n/a" : `${(n * 100).toFixed(digits)}%`;
 }
 
-export async function scoreFinancials(symbol: string, opts: { fast: boolean } = { fast: false }): Promise<StepComputation> {
+export async function scoreFinancials(
+  symbol: string,
+  opts: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false }
+): Promise<StepComputation> {
   const warnings: string[] = [];
   let fmp: FmpFundamentals | null = null;
   try {
@@ -54,8 +57,8 @@ export async function scoreFinancials(symbol: string, opts: { fast: boolean } = 
   }
   if (!finnhub && !fmp) {
     warnings.push(
-      opts.fast
-        ? "Finnhub /stock/metric not yet cached for this symbol — skipped in preview mode to avoid the shared rate limit; see full detail."
+      opts.skipLiveFundamentals
+        ? "Finnhub /stock/metric not yet cached for this symbol — skipped to avoid the shared rate limit; see full detail."
         : "Finnhub /stock/metric also unavailable for this symbol (no key, or lookup failed)."
     );
   }

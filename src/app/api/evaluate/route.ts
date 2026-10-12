@@ -4,7 +4,7 @@ import { mapWithConcurrency } from "@/lib/finnhub";
 import { AlpacaError } from "@/lib/alpaca";
 import { evaluateSymbol } from "@/lib/evaluation/score";
 import { loadEvaluationBars } from "@/lib/evaluation/evalBars";
-import type { EvaluationResult } from "@/lib/evaluation/types";
+import { BULK_PREVIEW_OPTIONS, FULL_EVAL_OPTIONS, type EvaluationResult } from "@/lib/evaluation/types";
 
 // Defense in depth for the serverless execution ceiling on Vercel: bulk mode now runs the
 // "fast" preview path (see computeEvaluation below), which measured well under this limit for
@@ -61,7 +61,7 @@ async function computeEvaluation(symbol: string, mode: EvalMode): Promise<Evalua
   // the first caller in a given 30-minute window actually hits the network.
   const bySymbol = await loadEvaluationBars().catch(() => new Map<string, never>());
   const bars = bySymbol.get(symbol.toUpperCase()) ?? [];
-  return evaluateSymbol(symbol, bars, { fast: mode === "fast" });
+  return evaluateSymbol(symbol, bars, mode === "fast" ? BULK_PREVIEW_OPTIONS : FULL_EVAL_OPTIONS);
 }
 
 /** Shared cache both the single-symbol detail mode and the bulk mode call into, keyed by

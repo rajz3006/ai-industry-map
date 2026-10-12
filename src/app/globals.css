@@ -3892,6 +3892,13 @@ table.ev-table {
   color: var(--source);
   margin: 0 0 18px;
 }
+.cb-datagap-note {
+  color: var(--muted);
+}
+.cb-zscore {
+  font: 400 10px "DM Mono", monospace;
+  color: var(--dim);
+}
 .cb-error {
   color: var(--risk);
   font-size: 13px;

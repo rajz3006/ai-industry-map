@@ -11,7 +11,7 @@ import {
   computeStopPrice,
 } from "@/lib/tradeSizing";
 import { changeDirection, formatChangePercent, formatPrice } from "@/lib/format";
-import type { ClosingCandidate, ClosingFilters } from "@/app/api/closing/route";
+import type { ClosingCandidate, ClosingFilters, DropBasis } from "@/app/api/closing/route";
 
 type StopMode = "vol" | "fixed";
 
@@ -37,12 +37,15 @@ const NOTIFIED_DATE_KEY = "cb-notified-date";
 const FILTERS_KEY = "cb-filters";
 
 const DEFAULT_FILTERS: ClosingFilters = {
+  dropBasis: "pct",
   minDropPct: 1,
+  minZScore: 1,
   minFundamentals: "good",
+  minValuation: "neutral",
   minTechnicals: "good",
 };
 
-const VERDICT_OPTIONS: ClosingFilters["minFundamentals"][] = ["strong", "good", "neutral"];
+const VERDICT_OPTIONS: ClosingFilters["minFundamentals"][] = ["strong", "good", "neutral", "weak"];
 
 function loadFilters(): ClosingFilters {
   if (typeof window === "undefined") return DEFAULT_FILTERS;
@@ -50,17 +53,25 @@ function loadFilters(): ClosingFilters {
     const raw = window.localStorage.getItem(FILTERS_KEY);
     if (!raw) return DEFAULT_FILTERS;
     const parsed = JSON.parse(raw) as Partial<ClosingFilters>;
+    const dropBasis: DropBasis = parsed.dropBasis === "zscore" ? "zscore" : DEFAULT_FILTERS.dropBasis;
     const minDropPct =
       typeof parsed.minDropPct === "number" && Number.isFinite(parsed.minDropPct)
         ? Math.min(50, Math.max(0, parsed.minDropPct))
         : DEFAULT_FILTERS.minDropPct;
+    const minZScore =
+      typeof parsed.minZScore === "number" && Number.isFinite(parsed.minZScore)
+        ? Math.min(10, Math.max(0, parsed.minZScore))
+        : DEFAULT_FILTERS.minZScore;
     const minFundamentals = VERDICT_OPTIONS.includes(parsed.minFundamentals as ClosingFilters["minFundamentals"])
       ? (parsed.minFundamentals as ClosingFilters["minFundamentals"])
       : DEFAULT_FILTERS.minFundamentals;
+    const minValuation = VERDICT_OPTIONS.includes(parsed.minValuation as ClosingFilters["minValuation"])
+      ? (parsed.minValuation as ClosingFilters["minValuation"])
+      : DEFAULT_FILTERS.minValuation;
     const minTechnicals = VERDICT_OPTIONS.includes(parsed.minTechnicals as ClosingFilters["minTechnicals"])
       ? (parsed.minTechnicals as ClosingFilters["minTechnicals"])
       : DEFAULT_FILTERS.minTechnicals;
-    return { minDropPct, minFundamentals, minTechnicals };
+    return { dropBasis, minDropPct, minZScore, minFundamentals, minValuation, minTechnicals };
   } catch {
     return DEFAULT_FILTERS;
   }
@@ -252,7 +263,11 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
   }
 
   const activeFilters = data?.filters ?? appliedFilters;
-  const filterSummary = `drop ≥ ${activeFilters.minDropPct}% · fundamentals ≥ ${activeFilters.minFundamentals} · technicals ≥ ${activeFilters.minTechnicals}`;
+  const dropBasisLabel =
+    activeFilters.dropBasis === "zscore"
+      ? `drop ≥ ${activeFilters.minZScore}σ (vs. own 20d volatility)`
+      : `drop ≥ ${activeFilters.minDropPct}%`;
+  const filterSummary = `${dropBasisLabel} · fundamentals ≥ ${activeFilters.minFundamentals} · valuation ≥ ${activeFilters.minValuation} · technicals ≥ ${activeFilters.minTechnicals}`;
 
   async function placeOrder() {
     if (!selected || !ticket || !("size" in ticket) || !ticket.size || ticket.size.shares <= 0) return;
@@ -295,10 +310,11 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
           <h2>Closing Bell — end-of-day setup</h2>
           <p className="cb-disclaimer">
             In the final <b>30 minutes before the 4:00 PM ET close</b>, this tab screens for stocks that{" "}
-            <b>dropped in today&rsquo;s session</b> while their <b>fundamentals</b> (financial-statement quality) and{" "}
-            <b>technicals</b> (chart indicators) still read strong or good. It is a screening tool that narrows a
-            watchlist, <b>not a recommendation</b> — a dip can keep dipping. Nothing here is investment advice, and
-            orders placed from the ticket below are paper trades.
+            <b>dropped in today&rsquo;s session</b> while their <b>fundamentals</b> (financial-statement quality),{" "}
+            <b>valuation</b> (not obviously overpriced for the dip), and <b>technicals</b> (chart indicators) all
+            clear your thresholds. It is a screening tool that narrows a watchlist, <b>not a recommendation</b> — a
+            dip can keep dipping. Nothing here is investment advice, and orders placed from the ticket below are
+            paper trades.
           </p>
         </div>
         <div className="cb-clock-wrap">
@@ -325,8 +341,17 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
 
       {data && (
         <p className="cb-session">
-          Session {data.sessionDate} · {data.evaluated} symbols scored · {data.candidates.length} matching (
-          {filterSummary})
+          Session {data.sessionDate} · {data.evaluated} symbols tracked · {data.dropped} cleared the drop filter ·{" "}
+          {data.candidates.length} matching ({filterSummary})
+          {data.excludedForDataGap > 0 && (
+            <span className="cb-datagap-note">
+              {" "}
+              · {data.excludedForDataGap} more dropped but {data.excludedForDataGap === 1 ? "has" : "have"} incomplete
+              fundamentals/valuation/technicals data right now — not excluded for failing the bar, just unscored; open
+              the symbol directly or re-run in a few minutes.
+            </span>
+          )}
+          {data.excludedForQuality > 0 && ` · ${data.excludedForQuality} dropped but didn't clear the quality bar.`}
         </p>
       )}
       {error && <p className="cb-error">Couldn&rsquo;t load the screen: {error}</p>}
@@ -334,27 +359,68 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
 
       <div className="cb-filters">
         <label className="cb-filter">
-          <span>Min intraday drop (%)</span>
-          <input
-            type="number"
-            min={0}
-            max={10}
-            step={0.5}
-            value={draftFilters.minDropPct}
-            onChange={(e) =>
-              setDraftFilters((f) => ({
-                ...f,
-                minDropPct: Math.min(10, Math.max(0, Number(e.target.value) || 0)),
-              }))
-            }
-          />
+          <span>Drop basis</span>
+          <select
+            value={draftFilters.dropBasis}
+            onChange={(e) => setDraftFilters((f) => ({ ...f, dropBasis: e.target.value as DropBasis }))}
+          >
+            <option value="pct">Flat % drop</option>
+            <option value="zscore">Vs. own volatility (z-score)</option>
+          </select>
         </label>
+        {draftFilters.dropBasis === "zscore" ? (
+          <label className="cb-filter">
+            <span>Min drop (σ vs. own 20d volatility)</span>
+            <input
+              type="number"
+              min={0}
+              max={5}
+              step={0.25}
+              value={draftFilters.minZScore}
+              onChange={(e) =>
+                setDraftFilters((f) => ({ ...f, minZScore: Math.min(5, Math.max(0, Number(e.target.value) || 0)) }))
+              }
+            />
+          </label>
+        ) : (
+          <label className="cb-filter">
+            <span>Min intraday drop (%)</span>
+            <input
+              type="number"
+              min={0}
+              max={10}
+              step={0.5}
+              value={draftFilters.minDropPct}
+              onChange={(e) =>
+                setDraftFilters((f) => ({
+                  ...f,
+                  minDropPct: Math.min(10, Math.max(0, Number(e.target.value) || 0)),
+                }))
+              }
+            />
+          </label>
+        )}
         <label className="cb-filter">
           <span>Fundamentals at least</span>
           <select
             value={draftFilters.minFundamentals}
             onChange={(e) =>
               setDraftFilters((f) => ({ ...f, minFundamentals: e.target.value as ClosingFilters["minFundamentals"] }))
+            }
+          >
+            {VERDICT_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {v[0].toUpperCase() + v.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="cb-filter">
+          <span>Valuation at least</span>
+          <select
+            value={draftFilters.minValuation}
+            onChange={(e) =>
+              setDraftFilters((f) => ({ ...f, minValuation: e.target.value as ClosingFilters["minValuation"] }))
             }
           >
             {VERDICT_OPTIONS.map((v) => (
@@ -389,8 +455,11 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
         </div>
       </div>
       <p className="cb-filters-note">
-        Defaults: drop ≥ 1%, fundamentals ≥ good, technicals ≥ good. Loosening a filter widens the net; tightening it
-        narrows to higher-conviction dips. Your last-used filters are remembered.
+        Defaults: drop ≥ 1%, fundamentals ≥ good, valuation ≥ neutral, technicals ≥ good. The z-score drop basis
+        compares today&rsquo;s move to the stock&rsquo;s own trailing volatility instead of a flat %, so a routine
+        move in a volatile name and a genuinely unusual move in a quiet one aren&rsquo;t treated the same. Loosening
+        a filter widens the net; tightening it narrows to higher-conviction dips. Your last-used filters are
+        remembered.
       </p>
 
       {selected && (
@@ -526,9 +595,13 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
 
       {data && data.candidates.length === 0 && !loading && (
         <p className="cb-empty">
-          No matches with the current filters — nothing is down {activeFilters.minDropPct}%+ in the session with
-          fundamentals ≥ {activeFilters.minFundamentals} and technicals ≥ {activeFilters.minTechnicals}. Try loosening a
-          filter above, or <button className="cb-link-btn" onClick={refresh}>re-run the screen</button>.
+          No matches with the current filters ({filterSummary}).{" "}
+          {data.excludedForDataGap > 0
+            ? `${data.excludedForDataGap} symbol(s) dropped but have incomplete data right now rather than a failed quality check — try again in a few minutes, or open one directly.`
+            : data.excludedForQuality > 0
+              ? `${data.excludedForQuality} symbol(s) dropped but didn't clear the quality bar.`
+              : "Nothing dropped enough today to reach the screen."}{" "}
+          Try loosening a filter above, or <button className="cb-link-btn" onClick={refresh}>re-run the screen</button>.
         </p>
       )}
 
@@ -542,7 +615,10 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
                     {c.symbol}
                   </button>
                   <span className="cb-name">{c.name}</span>
-                  <span className={`cb-change ${changeDirection(c.changePct)}`}>{formatChangePercent(c.changePct)}</span>
+                  <span className={`cb-change ${changeDirection(c.changePct)}`}>
+                    {formatChangePercent(c.changePct)}
+                    {c.zScore !== null && <span className="cb-zscore"> ({c.zScore.toFixed(1)}σ)</span>}
+                  </span>
                   <span className="cb-price">{formatPrice(c.price, c.symbol)}</span>
                   <button
                     className={`cb-config-btn${selectedSymbol === c.symbol ? " active" : ""}`}
@@ -554,6 +630,9 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
                 <div className="cb-row-meta">
                   <span className={`cb-verdict ${verdictTone(c.financialsVerdict)}`}>
                     Fundamentals: {c.financialsVerdict} ({c.financialsScore.toFixed(1)}/5)
+                  </span>
+                  <span className={`cb-verdict ${verdictTone(c.valuationVerdict)}`}>
+                    Valuation: {c.valuationVerdict} ({c.valuationScore.toFixed(1)}/5)
                   </span>
                   <span className={`cb-verdict ${verdictTone(c.technicalsVerdict)}`}>
                     Technicals: {c.technicalsVerdict} ({c.technicalsScore.toFixed(1)}/5)

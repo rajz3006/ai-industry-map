@@ -8,7 +8,7 @@
 
 import type { Bar } from "@/lib/indicators";
 import { moatIndustryData } from "@/data/moatIndustryData";
-import { STEP_NAMES, type EvaluationResult, type StepNumber, type StepScore } from "./types";
+import { STEP_NAMES, type EvaluateOptions, type EvaluationResult, type StepNumber, type StepScore } from "./types";
 import { scoreFinancials, type StepComputation } from "./scoreFinancials";
 import { scoreValuation } from "./scoreValuation";
 import { scoreManagement } from "./scoreManagement";
@@ -72,7 +72,11 @@ async function safeStep(step: StepNumber, label: string, run: () => Promise<Step
   }
 }
 
-export async function evaluateSymbol(symbol: string, bars: Bar[], opts: { fast: boolean } = { fast: false }): Promise<EvaluationResult> {
+export async function evaluateSymbol(
+  symbol: string,
+  bars: Bar[],
+  opts: EvaluateOptions = { skipExpensive: false, skipLiveFundamentals: false }
+): Promise<EvaluationResult> {
   const dataWarnings: string[] = [];
   const sym = symbol.toUpperCase();
 
@@ -149,10 +153,16 @@ export async function evaluateSymbol(symbol: string, bars: Bar[], opts: { fast: 
 
   const steps: StepScore[] = [...stepsSoFar, compositeStep].sort((a, b) => a.step - b.step);
 
-  if (opts.fast) {
+  if (opts.skipExpensive && opts.skipLiveFundamentals) {
     dataWarnings.push(
       "Preview score based on 6 of 8 steps — open this symbol for the full evaluation including insider activity."
     );
+  } else if (opts.skipExpensive) {
+    dataWarnings.push(
+      "Step 5 (management) skipped — insider cluster-buy activity not checked. Steps 1-4, 6, and 7 (minus its insider bonus) used live data."
+    );
+  } else if (opts.skipLiveFundamentals) {
+    dataWarnings.push("Steps 3-4 (fundamentals/valuation) limited to already-cached data only.");
   }
 
   return {
