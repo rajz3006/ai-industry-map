@@ -39,11 +39,47 @@ export interface ClosingResponse {
   sessionDate: string;
   evaluated: number;
   candidates: ClosingCandidate[];
+  /** The filter thresholds actually applied — echoed so the UI can display them. */
+  filters: ClosingFilters;
 }
 
-// Candidate gates — kept as named constants so the tab can explain them in plain words.
-const MIN_DROP_PCT = 1.0; // dropped at least 1% in the session
-const GOOD_VERDICTS: StepVerdict[] = ["strong", "good"];
+export interface ClosingFilters {
+  minDropPct: number;
+  minFundamentals: StepVerdict;
+  minTechnicals: StepVerdict;
+}
+
+// Candidate gates — the defaults the tab ships with; the UI lets the reader change them.
+const DEFAULT_MIN_DROP_PCT = 1.0; // dropped at least 1% in the session
+const DEFAULT_MIN_VERDICT: StepVerdict = "good";
+
+// Ranked so "at least X" comparisons work; unknown never passes any threshold.
+const VERDICT_RANK: Record<StepVerdict, number> = {
+  strong: 5,
+  good: 4,
+  neutral: 3,
+  weak: 2,
+  poor: 1,
+  unknown: 0,
+};
+
+const VALID_VERDICTS: StepVerdict[] = ["strong", "good", "neutral", "weak", "poor"];
+
+function parseVerdictParam(value: string | null): StepVerdict {
+  const v = (value ?? "").toLowerCase();
+  return VALID_VERDICTS.includes(v as StepVerdict) ? (v as StepVerdict) : DEFAULT_MIN_VERDICT;
+}
+
+function parseFilters(searchParams: URLSearchParams): ClosingFilters {
+  const rawDrop = Number(searchParams.get("minDrop"));
+  const minDropPct =
+    Number.isFinite(rawDrop) ? Math.min(50, Math.max(0, rawDrop)) : DEFAULT_MIN_DROP_PCT;
+  return {
+    minDropPct,
+    minFundamentals: parseVerdictParam(searchParams.get("minFund")),
+    minTechnicals: parseVerdictParam(searchParams.get("minTech")),
+  };
+}
 
 const VOL_WINDOW = 20;
 const MIN_CLOSES_REQUIRED = VOL_WINDOW + 1;
@@ -73,8 +109,9 @@ function fmtPct(x: number): string {
   return `${x >= 0 ? "+" : ""}${x.toFixed(2)}%`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const filters = parseFilters(new URL(request.url).searchParams);
     const [{ bySymbol, dates }, evalBars] = await Promise.all([loadBarSet(), loadEvaluationBars()]);
     if (dates.length < 2) {
       return NextResponse.json({ error: "Not enough historical bar data available yet" }, { status: 503 });
@@ -130,7 +167,7 @@ export async function GET() {
       });
     }
 
-    const dropped = rows.filter((r) => r.changePct <= -MIN_DROP_PCT);
+    const dropped = rows.filter((r) => r.changePct <= -filters.minDropPct);
 
     const evaluated = await mapWithConcurrency(dropped, EVAL_CONCURRENCY, async (r): Promise<ClosingCandidate | null> => {
       try {
@@ -156,8 +193,8 @@ export async function GET() {
           evalCache.set(r.symbol, entry);
         }
 
-        if (!GOOD_VERDICTS.includes(entry.financialsVerdict)) return null;
-        if (!GOOD_VERDICTS.includes(entry.technicalsVerdict)) return null;
+        if (VERDICT_RANK[entry.financialsVerdict] < VERDICT_RANK[filters.minFundamentals]) return null;
+        if (VERDICT_RANK[entry.technicalsVerdict] < VERDICT_RANK[filters.minTechnicals]) return null;
 
         const reasons = [
           `Down ${fmtPct(r.changePct)} in the session${r.offHighPct <= -0.5 ? `, fading ${fmtPct(r.offHighPct)} off the day high` : ""} (intraday range ${r.dayRangePct.toFixed(1)}%)`,
@@ -198,6 +235,7 @@ export async function GET() {
       sessionDate,
       evaluated: rows.length,
       candidates,
+      filters,
     };
     return NextResponse.json(response);
   } catch (err) {

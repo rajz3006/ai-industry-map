@@ -4157,3 +4157,83 @@ table.ev-table {
     margin-left: 0;
   }
 }
+
+/* --- Closing Bell filters --- */
+.cb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 8px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border-input);
+  border-radius: 3px;
+}
+.cb-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.cb-filter span {
+  font: 500 10px "DM Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cb-filter input[type="number"],
+.cb-filter select {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border-input);
+  border-radius: 2px;
+  padding: 6px 9px;
+  font: 500 12px "DM Mono", monospace;
+  color-scheme: light dark;
+  min-width: 120px;
+}
+.cb-filter input[type="number"]:focus-visible,
+.cb-filter select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.cb-filter-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.cb-apply-btn {
+  background: var(--ink);
+  color: var(--panel);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 7px 14px;
+  font: 600 11px "DM Mono", monospace;
+  cursor: pointer;
+}
+.cb-reset-btn {
+  background: none;
+  border: 1px solid var(--border-input);
+  border-radius: 2px;
+  padding: 6px 12px;
+  color: var(--ink);
+  font: 500 11px "DM Mono", monospace;
+  cursor: pointer;
+}
+.cb-reset-btn:hover {
+  border-color: var(--focus);
+}
+.cb-filters-note {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  max-width: 700px;
+}
+@media (max-width: 720px) {
+  .cb-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

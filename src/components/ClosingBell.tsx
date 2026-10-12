@@ -11,7 +11,7 @@ import {
   computeStopPrice,
 } from "@/lib/tradeSizing";
 import { changeDirection, formatChangePercent, formatPrice } from "@/lib/format";
-import type { ClosingCandidate } from "@/app/api/closing/route";
+import type { ClosingCandidate, ClosingFilters } from "@/app/api/closing/route";
 
 type StopMode = "vol" | "fixed";
 
@@ -34,6 +34,37 @@ const DEFAULT_PREFS: TicketPrefs = {
 const PREFS_KEY = "cb-ticket-prefs";
 const NOTIFY_KEY = "cb-notify";
 const NOTIFIED_DATE_KEY = "cb-notified-date";
+const FILTERS_KEY = "cb-filters";
+
+const DEFAULT_FILTERS: ClosingFilters = {
+  minDropPct: 1,
+  minFundamentals: "good",
+  minTechnicals: "good",
+};
+
+const VERDICT_OPTIONS: ClosingFilters["minFundamentals"][] = ["strong", "good", "neutral"];
+
+function loadFilters(): ClosingFilters {
+  if (typeof window === "undefined") return DEFAULT_FILTERS;
+  try {
+    const raw = window.localStorage.getItem(FILTERS_KEY);
+    if (!raw) return DEFAULT_FILTERS;
+    const parsed = JSON.parse(raw) as Partial<ClosingFilters>;
+    const minDropPct =
+      typeof parsed.minDropPct === "number" && Number.isFinite(parsed.minDropPct)
+        ? Math.min(50, Math.max(0, parsed.minDropPct))
+        : DEFAULT_FILTERS.minDropPct;
+    const minFundamentals = VERDICT_OPTIONS.includes(parsed.minFundamentals as ClosingFilters["minFundamentals"])
+      ? (parsed.minFundamentals as ClosingFilters["minFundamentals"])
+      : DEFAULT_FILTERS.minFundamentals;
+    const minTechnicals = VERDICT_OPTIONS.includes(parsed.minTechnicals as ClosingFilters["minTechnicals"])
+      ? (parsed.minTechnicals as ClosingFilters["minTechnicals"])
+      : DEFAULT_FILTERS.minTechnicals;
+    return { minDropPct, minFundamentals, minTechnicals };
+  } catch {
+    return DEFAULT_FILTERS;
+  }
+}
 
 function loadPrefs(): TicketPrefs {
   if (typeof window === "undefined") return DEFAULT_PREFS;
@@ -76,7 +107,10 @@ function verdictTone(v: string): "up" | "down" | "" {
 }
 
 export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: string) => void }) {
-  const { data, loading, error, refresh } = useClosingCandidates();
+  const [appliedFilters, setAppliedFilters] = useState<ClosingFilters>(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<ClosingFilters>(DEFAULT_FILTERS);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+  const { data, loading, error, refresh } = useClosingCandidates(appliedFilters);
   useNowTick(15_000);
 
   const [prefs, setPrefs] = useState<TicketPrefs>(DEFAULT_PREFS);
@@ -89,6 +123,7 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
 
   useEffect(() => {
     const stored = loadPrefs();
+    const storedFilters = loadFilters();
     let notify = false;
     let perm = "unknown";
     try {
@@ -103,7 +138,19 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
     setPrefsLoaded(true);
     setNotifyOn(notify);
     setNotifyState(perm);
+    setAppliedFilters(storedFilters);
+    setDraftFilters(storedFilters);
+    setFiltersLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (!filtersLoaded) return;
+    try {
+      window.localStorage.setItem(FILTERS_KEY, JSON.stringify(appliedFilters));
+    } catch {
+      /* ignore */
+    }
+  }, [appliedFilters, filtersLoaded]);
 
   useEffect(() => {
     if (!prefsLoaded) return;
@@ -193,6 +240,20 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
     setPlaceResult(null);
   }
 
+  function applyFilters() {
+    setAppliedFilters({ ...draftFilters });
+    refresh();
+  }
+
+  function resetFilters() {
+    setDraftFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    refresh();
+  }
+
+  const activeFilters = data?.filters ?? appliedFilters;
+  const filterSummary = `drop ≥ ${activeFilters.minDropPct}% · fundamentals ≥ ${activeFilters.minFundamentals} · technicals ≥ ${activeFilters.minTechnicals}`;
+
   async function placeOrder() {
     if (!selected || !ticket || !("size" in ticket) || !ticket.size || ticket.size.shares <= 0) return;
     setPlacing(true);
@@ -264,12 +325,73 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
 
       {data && (
         <p className="cb-session">
-          Session {data.sessionDate} · {data.evaluated} symbols scored · {data.candidates.length} matching the dip +
-          fundamentals + technicals screen
+          Session {data.sessionDate} · {data.evaluated} symbols scored · {data.candidates.length} matching (
+          {filterSummary})
         </p>
       )}
       {error && <p className="cb-error">Couldn&rsquo;t load the screen: {error}</p>}
       {loading && !data && <p className="cb-loading">Scoring the session against fundamentals and technicals…</p>}
+
+      <div className="cb-filters">
+        <label className="cb-filter">
+          <span>Min intraday drop (%)</span>
+          <input
+            type="number"
+            min={0}
+            max={10}
+            step={0.5}
+            value={draftFilters.minDropPct}
+            onChange={(e) =>
+              setDraftFilters((f) => ({
+                ...f,
+                minDropPct: Math.min(10, Math.max(0, Number(e.target.value) || 0)),
+              }))
+            }
+          />
+        </label>
+        <label className="cb-filter">
+          <span>Fundamentals at least</span>
+          <select
+            value={draftFilters.minFundamentals}
+            onChange={(e) =>
+              setDraftFilters((f) => ({ ...f, minFundamentals: e.target.value as ClosingFilters["minFundamentals"] }))
+            }
+          >
+            {VERDICT_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {v[0].toUpperCase() + v.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="cb-filter">
+          <span>Technicals at least</span>
+          <select
+            value={draftFilters.minTechnicals}
+            onChange={(e) =>
+              setDraftFilters((f) => ({ ...f, minTechnicals: e.target.value as ClosingFilters["minTechnicals"] }))
+            }
+          >
+            {VERDICT_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {v[0].toUpperCase() + v.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="cb-filter-actions">
+          <button className="cb-apply-btn" onClick={applyFilters}>
+            Apply filters
+          </button>
+          <button className="cb-reset-btn" onClick={resetFilters}>
+            Reset
+          </button>
+        </div>
+      </div>
+      <p className="cb-filters-note">
+        Defaults: drop ≥ 1%, fundamentals ≥ good, technicals ≥ good. Loosening a filter widens the net; tightening it
+        narrows to higher-conviction dips. Your last-used filters are remembered.
+      </p>
 
       {selected && (
         <div className="cb-ticket">
@@ -404,8 +526,9 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
 
       {data && data.candidates.length === 0 && !loading && (
         <p className="cb-empty">
-          No matches right now — nothing is down 1%+ in the session with strong/good fundamentals and technicals both.
-          {" "}<button className="cb-link-btn" onClick={refresh}>Re-run the screen</button>
+          No matches with the current filters — nothing is down {activeFilters.minDropPct}%+ in the session with
+          fundamentals ≥ {activeFilters.minFundamentals} and technicals ≥ {activeFilters.minTechnicals}. Try loosening a
+          filter above, or <button className="cb-link-btn" onClick={refresh}>re-run the screen</button>.
         </p>
       )}
 
