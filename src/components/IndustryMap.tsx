@@ -18,6 +18,7 @@ import Fragility from "./Fragility";
 import MarketsTable from "./MarketsTable";
 import MoversTable from "./MoversTable";
 import OpportunitiesScreener from "./OpportunitiesScreener";
+import ClosingBell from "./ClosingBell";
 import TradeDesk from "./TradeDesk";
 import FastRotationBacktest from "./FastRotationBacktest";
 import EarningsCalendar from "./EarningsCalendar";
@@ -26,7 +27,7 @@ import StockEvaluator from "./StockEvaluator";
 import StockDetail from "./StockDetail";
 import AlertsPanel from "./AlertsPanel";
 
-type View = "network" | "loops" | "risks" | "markets" | "movers" | "opportunities" | "evaluator" | "trading" | "backtest" | "calendar" | "catalyst";
+type View = "network" | "loops" | "risks" | "markets" | "movers" | "opportunities" | "closing" | "evaluator" | "trading" | "backtest" | "calendar" | "catalyst";
 
 // "Who pays whom" and "What breaks first" live under one "AI Overview" top-level tab as
 // sub-tabs, rather than each taking a top-level slot next to Markets/Movers/Calendar.
@@ -47,6 +48,7 @@ const TABS: TabDef[] = [
   { kind: "single", view: "markets", label: "Markets" },
   { kind: "single", view: "movers", label: "Daily movers" },
   { kind: "single", view: "opportunities", label: "Opportunities" },
+  { kind: "single", view: "closing", label: "Closing Bell" },
   { kind: "single", view: "evaluator", label: "Evaluator" },
   { kind: "single", view: "trading", label: "Trade Desk" },
   { kind: "single", view: "backtest", label: "Fast Rotation" },
@@ -335,6 +337,10 @@ export default function IndustryMap() {
         {view === "opportunities" && (
           <OpportunitiesScreener onSelectNode={selectNode} onOpenStock={setStockSymbol} />
         )}
+      </section>
+
+      <section className={`insight ${view === "closing" ? "active" : ""}`}>
+        {view === "closing" && <ClosingBell onOpenStock={setStockSymbol} />}
       </section>
 
       <section className={`insight ${view === "evaluator" ? "active" : ""}`}>

@@ -1,0 +1,453 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useClosingCandidates } from "@/hooks/useClosingCandidates";
+import { useNowTick } from "@/hooks/useNowTick";
+import { requestNotificationPermission } from "@/hooks/usePriceAlerts";
+import { getMarketWindowState, formatCountdown, type MarketPhase } from "@/lib/marketClock";
+import {
+  computePositionSize,
+  computeRMultiple,
+  computeStopPrice,
+} from "@/lib/tradeSizing";
+import { changeDirection, formatChangePercent, formatPrice } from "@/lib/format";
+import type { ClosingCandidate } from "@/app/api/closing/route";
+
+type StopMode = "vol" | "fixed";
+
+interface TicketPrefs {
+  equity: number;
+  riskPct: number;
+  profitPct: number;
+  stopMode: StopMode;
+  stopPct: number;
+}
+
+const DEFAULT_PREFS: TicketPrefs = {
+  equity: 5000,
+  riskPct: 1,
+  profitPct: 10,
+  stopMode: "vol",
+  stopPct: 4,
+};
+
+const PREFS_KEY = "cb-ticket-prefs";
+const NOTIFY_KEY = "cb-notify";
+const NOTIFIED_DATE_KEY = "cb-notified-date";
+
+function loadPrefs(): TicketPrefs {
+  if (typeof window === "undefined") return DEFAULT_PREFS;
+  try {
+    const raw = window.localStorage.getItem(PREFS_KEY);
+    if (!raw) return DEFAULT_PREFS;
+    const parsed = JSON.parse(raw) as Partial<TicketPrefs>;
+    return {
+      equity: typeof parsed.equity === "number" && parsed.equity > 0 ? parsed.equity : DEFAULT_PREFS.equity,
+      riskPct: typeof parsed.riskPct === "number" && parsed.riskPct > 0 ? parsed.riskPct : DEFAULT_PREFS.riskPct,
+      profitPct:
+        typeof parsed.profitPct === "number" && parsed.profitPct > 0 ? parsed.profitPct : DEFAULT_PREFS.profitPct,
+      stopMode: parsed.stopMode === "fixed" ? "fixed" : "vol",
+      stopPct: typeof parsed.stopPct === "number" && parsed.stopPct > 0 ? parsed.stopPct : DEFAULT_PREFS.stopPct,
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
+function phaseLabel(phase: MarketPhase): string {
+  switch (phase) {
+    case "pre":
+      return "Pre-market";
+    case "open":
+      return "Market open";
+    case "window":
+      return "Closing window open";
+    case "closed":
+      return "Market closed";
+    case "weekend":
+      return "Weekend";
+  }
+}
+
+function verdictTone(v: string): "up" | "down" | "" {
+  if (v === "strong" || v === "good") return "up";
+  if (v === "weak" || v === "poor") return "down";
+  return "";
+}
+
+export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: string) => void }) {
+  const { data, loading, error, refresh } = useClosingCandidates();
+  useNowTick(15_000);
+
+  const [prefs, setPrefs] = useState<TicketPrefs>(DEFAULT_PREFS);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [notifyOn, setNotifyOn] = useState(false);
+  const [notifyState, setNotifyState] = useState<string>("unknown");
+  const [placing, setPlacing] = useState(false);
+  const [placeResult, setPlaceResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    const stored = loadPrefs();
+    let notify = false;
+    let perm = "unknown";
+    try {
+      notify = window.localStorage.getItem(NOTIFY_KEY) === "1";
+      perm = "Notification" in window ? Notification.permission : "unsupported";
+    } catch {
+      /* private mode etc. — notify stays off */
+    }
+    // Hydration-safe init: the first render uses defaults on both server and client.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrefs(stored);
+    setPrefsLoaded(true);
+    setNotifyOn(notify);
+    setNotifyState(perm);
+  }, []);
+
+  useEffect(() => {
+    if (!prefsLoaded) return;
+    try {
+      window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      /* ignore */
+    }
+  }, [prefs, prefsLoaded]);
+
+  // Recomputed on every render; useNowTick(15s) above keeps the countdown live.
+  // eslint-disable-next-line react-hooks/purity -- Date.now() in render is this hook's documented pattern
+  const windowState = getMarketWindowState(Date.now());
+
+  // Fire the "window is open" notification once per New-York day, only if the user opted in.
+  useEffect(() => {
+    if (!notifyOn || notifyState !== "granted") return;
+    const st = getMarketWindowState(Date.now());
+    if (st.phase !== "window") return;
+    try {
+      const today = st.nyDate;
+      if (window.localStorage.getItem(NOTIFIED_DATE_KEY) === today) return;
+      window.localStorage.setItem(NOTIFIED_DATE_KEY, today);
+      new Notification("Closing window is open", {
+        body: "The final 30 minutes before the bell — the end-of-day screen is live.",
+      });
+    } catch {
+      /* Notification construction can throw in some contexts */
+    }
+  }, [notifyOn, notifyState, windowState.phase]);
+
+  async function toggleNotify() {
+    if (notifyOn) {
+      setNotifyOn(false);
+      try {
+        window.localStorage.setItem(NOTIFY_KEY, "0");
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    const perm = await requestNotificationPermission();
+    setNotifyState(perm);
+    if (perm === "granted") {
+      setNotifyOn(true);
+      try {
+        window.localStorage.setItem(NOTIFY_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  const selected: ClosingCandidate | null = useMemo(
+    () => (selectedSymbol ? data?.candidates.find((c) => c.symbol === selectedSymbol) ?? null : null),
+    [data, selectedSymbol]
+  );
+
+  const ticket = useMemo(() => {
+    if (!selected) return null;
+    const entry = selected.price;
+    let stop: number | null = null;
+    let stopNote: string | null = null;
+    if (prefs.stopMode === "vol") {
+      if (selected.trailingStdDevPct && selected.trailingStdDevPct > 0) {
+        stop = computeStopPrice(entry, selected.trailingStdDevPct);
+      } else {
+        stopNote = "Not enough price history for a volatility stop — switch to fixed %.";
+      }
+    } else {
+      stop = entry * (1 - prefs.stopPct / 100);
+    }
+    if (stop === null || stop <= 0 || stop >= entry) return { stopNote: stopNote ?? "Stop must sit below the entry price.", entry };
+    const target = entry * (1 + prefs.profitPct / 100);
+    const size = computePositionSize(entry, stop, prefs.equity, prefs.riskPct);
+    const rMultiple = computeRMultiple(entry, stop, target);
+    return { entry, stop, target, size, rMultiple, stopNote: null as string | null };
+  }, [selected, prefs]);
+
+  function updatePrefs(patch: Partial<TicketPrefs>) {
+    setPrefs((p) => ({ ...p, ...patch }));
+    setPlaceResult(null);
+  }
+
+  function selectCandidate(symbol: string) {
+    setSelectedSymbol(symbol);
+    setPlaceResult(null);
+  }
+
+  async function placeOrder() {
+    if (!selected || !ticket || !("size" in ticket) || !ticket.size || ticket.size.shares <= 0) return;
+    setPlacing(true);
+    setPlaceResult(null);
+    try {
+      const res = await fetch("/api/trading/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol: selected.symbol,
+          qty: ticket.size.shares,
+          takeProfitPrice: Number(ticket.target.toFixed(2)),
+          stopLossPrice: Number(ticket.stop.toFixed(2)),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setPlaceResult({ ok: false, message: body?.error ?? `Order failed (${res.status})` });
+      } else {
+        setPlaceResult({
+          ok: true,
+          message: `Paper bracket order placed: ${ticket.size.shares} ${selected.symbol} @ ${formatPrice(ticket.entry, selected.symbol)}, stop ${formatPrice(ticket.stop, selected.symbol)}, target ${formatPrice(ticket.target, selected.symbol)}.`,
+        });
+      }
+    } catch (err) {
+      setPlaceResult({ ok: false, message: err instanceof Error ? err.message : "Order failed" });
+    } finally {
+      setPlacing(false);
+    }
+  }
+
+  const phase = windowState.phase;
+  const bannerTone = phase === "window" ? "open" : phase === "open" ? "soon" : "off";
+
+  return (
+    <div className="cb-wrap">
+      <div className="cb-head">
+        <div>
+          <h2>Closing Bell — end-of-day setup</h2>
+          <p className="cb-disclaimer">
+            In the final <b>30 minutes before the 4:00 PM ET close</b>, this tab screens for stocks that{" "}
+            <b>dropped in today&rsquo;s session</b> while their <b>fundamentals</b> (financial-statement quality) and{" "}
+            <b>technicals</b> (chart indicators) still read strong or good. It is a screening tool that narrows a
+            watchlist, <b>not a recommendation</b> — a dip can keep dipping. Nothing here is investment advice, and
+            orders placed from the ticket below are paper trades.
+          </p>
+        </div>
+        <div className="cb-clock-wrap">
+          <div className={`cb-clock cb-${bannerTone}`}>
+            <span className="cb-clock-label">{phaseLabel(phase)} · {windowState.nyTime} ET</span>
+            {phase === "window" && (
+              <span className="cb-clock-big">Window open — {formatCountdown(windowState.msToClose)} to the bell</span>
+            )}
+            {(phase === "open" || phase === "pre") && windowState.msToWindow > 0 && (
+              <span className="cb-clock-big">Window opens in {formatCountdown(windowState.msToWindow)}</span>
+            )}
+            {(phase === "closed" || phase === "weekend") && (
+              <span className="cb-clock-big">Showing the last session — next window in {formatCountdown(windowState.msToWindow)}</span>
+            )}
+          </div>
+          <button className="cb-notify-btn" onClick={toggleNotify}>
+            {notifyOn ? "Window alerts on" : "Alert me at 3:30 PM ET"}
+          </button>
+          {notifyState !== "granted" && notifyState !== "unknown" && !notifyOn && (
+            <span className="cb-notify-hint">Browser notifications {notifyState}.</span>
+          )}
+        </div>
+      </div>
+
+      {data && (
+        <p className="cb-session">
+          Session {data.sessionDate} · {data.evaluated} symbols scored · {data.candidates.length} matching the dip +
+          fundamentals + technicals screen
+        </p>
+      )}
+      {error && <p className="cb-error">Couldn&rsquo;t load the screen: {error}</p>}
+      {loading && !data && <p className="cb-loading">Scoring the session against fundamentals and technicals…</p>}
+
+      {selected && (
+        <div className="cb-ticket">
+          <div className="cb-ticket-head">
+            <h3>
+              Trade ticket — {selected.symbol} <span className="cb-ticket-name">{selected.name}</span>
+            </h3>
+            <button className="cb-ticket-close" onClick={() => { setSelectedSymbol(null); setPlaceResult(null); }}>
+              Close
+            </button>
+          </div>
+          <p className="cb-ticket-note">
+            Entry defaults to the last price ({formatPrice(selected.price, selected.symbol)}). Tune the risk, profit
+            target, and stop below — the ticket recomputes size and reward:risk live. Placing an order submits a paper
+            bracket trade, visible on the Trade Desk tab.
+          </p>
+          <div className="cb-ticket-inputs">
+            <label className="cb-field">
+              <span>Account equity ($)</span>
+              <input
+                type="number"
+                min={1}
+                step={100}
+                value={prefs.equity}
+                onChange={(e) => updatePrefs({ equity: Math.max(1, Number(e.target.value) || 1) })}
+              />
+            </label>
+            <label className="cb-field">
+              <span>Risk per trade (%)</span>
+              <input
+                type="number"
+                min={0.1}
+                max={100}
+                step={0.25}
+                value={prefs.riskPct}
+                onChange={(e) => updatePrefs({ riskPct: Math.min(100, Math.max(0.1, Number(e.target.value) || 0.1)) })}
+              />
+            </label>
+            <label className="cb-field">
+              <span>Profit target (%)</span>
+              <input
+                type="number"
+                min={0.5}
+                max={500}
+                step={1}
+                value={prefs.profitPct}
+                onChange={(e) => updatePrefs({ profitPct: Math.min(500, Math.max(0.5, Number(e.target.value) || 0.5)) })}
+              />
+            </label>
+            <div className="cb-field">
+              <span>Stop mode</span>
+              <div className="cb-radio-row" role="radiogroup" aria-label="Stop mode">
+                <label>
+                  <input
+                    type="radio"
+                    name="cb-stop-mode"
+                    checked={prefs.stopMode === "vol"}
+                    onChange={() => updatePrefs({ stopMode: "vol" })}
+                  />
+                  Volatility (2σ)
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="cb-stop-mode"
+                    checked={prefs.stopMode === "fixed"}
+                    onChange={() => updatePrefs({ stopMode: "fixed" })}
+                  />
+                  Fixed %
+                </label>
+              </div>
+            </div>
+            {prefs.stopMode === "fixed" && (
+              <label className="cb-field">
+                <span>Stop distance (%)</span>
+                <input
+                  type="number"
+                  min={0.5}
+                  max={50}
+                  step={0.5}
+                  value={prefs.stopPct}
+                  onChange={(e) => updatePrefs({ stopPct: Math.min(50, Math.max(0.5, Number(e.target.value) || 0.5)) })}
+                />
+              </label>
+            )}
+          </div>
+
+          {ticket && "stopNote" in ticket && ticket.stopNote && (
+            <p className="cb-error">{ticket.stopNote}</p>
+          )}
+          {ticket && "size" in ticket && ticket.size && (
+            <div className="cb-ticket-result">
+              <span>Entry <b>{formatPrice(ticket.entry, selected.symbol)}</b></span>
+              <span>Stop <b>{formatPrice(ticket.stop, selected.symbol)}</b></span>
+              <span>Target <b>{formatPrice(ticket.target, selected.symbol)}</b></span>
+              <span>Shares <b>{ticket.size.shares.toLocaleString()}</b></span>
+              <span>Position <b>${ticket.size.positionValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}</b></span>
+              <span>Risk <b>${ticket.size.riskBudget.toLocaleString("en-US", { maximumFractionDigits: 0 })}</b></span>
+              <span>
+                Reward:risk{" "}
+                <b>{ticket.rMultiple === null ? "—" : `${ticket.rMultiple.toFixed(2)}:1`}</b>
+              </span>
+            </div>
+          )}
+          {ticket && "size" in ticket && ticket.size && ticket.size.shares <= 0 && (
+            <p className="cb-error">Risk budget buys zero shares at this stop distance — raise equity or risk %, or tighten the stop.</p>
+          )}
+
+          <div className="cb-ticket-actions">
+            <button
+              className="cb-place-btn"
+              disabled={placing || !ticket || !("size" in ticket) || !ticket.size || ticket.size.shares <= 0}
+              onClick={placeOrder}
+            >
+              {placing ? "Placing…" : "Place paper trade"}
+            </button>
+            <button className="cb-refresh-btn" onClick={() => onOpenStock(selected.symbol)}>
+              Open {selected.symbol} detail
+            </button>
+          </div>
+          {placeResult && (
+            <p className={placeResult.ok ? "cb-success" : "cb-error"}>{placeResult.message}</p>
+          )}
+          <p className="cb-how">
+            How this ticket works: the stop is either 2× the stock&rsquo;s own trailing 20-day daily volatility below
+            entry (wider for choppier names) or your fixed % — your pick. Shares are sized so a stop-out loses no more
+            than your risk % of equity. The profit target is your % above entry; reward:risk tells you what a win pays
+            relative to a stop-out.
+          </p>
+        </div>
+      )}
+
+      {data && data.candidates.length === 0 && !loading && (
+        <p className="cb-empty">
+          No matches right now — nothing is down 1%+ in the session with strong/good fundamentals and technicals both.
+          {" "}<button className="cb-link-btn" onClick={refresh}>Re-run the screen</button>
+        </p>
+      )}
+
+      {data && data.candidates.length > 0 && (
+        <>
+          <ul className="cb-list">
+            {data.candidates.map((c) => (
+              <li key={c.symbol} className="cb-row">
+                <div className="cb-row-top">
+                  <button className="cb-symbol" onClick={() => onOpenStock(c.symbol)}>
+                    {c.symbol}
+                  </button>
+                  <span className="cb-name">{c.name}</span>
+                  <span className={`cb-change ${changeDirection(c.changePct)}`}>{formatChangePercent(c.changePct)}</span>
+                  <span className="cb-price">{formatPrice(c.price, c.symbol)}</span>
+                  <button
+                    className={`cb-config-btn${selectedSymbol === c.symbol ? " active" : ""}`}
+                    onClick={() => selectCandidate(c.symbol)}
+                  >
+                    {selectedSymbol === c.symbol ? "Configuring…" : "Configure trade"}
+                  </button>
+                </div>
+                <div className="cb-row-meta">
+                  <span className={`cb-verdict ${verdictTone(c.financialsVerdict)}`}>
+                    Fundamentals: {c.financialsVerdict} ({c.financialsScore.toFixed(1)}/5)
+                  </span>
+                  <span className={`cb-verdict ${verdictTone(c.technicalsVerdict)}`}>
+                    Technicals: {c.technicalsVerdict} ({c.technicalsScore.toFixed(1)}/5)
+                  </span>
+                  <span className="cb-offhigh">Off day high {formatChangePercent(c.offHighPct)}</span>
+                </div>
+                <ul className="cb-reasons">
+                  {c.reasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+          <button className="cb-refresh-btn" onClick={refresh}>Re-run the screen</button>
+        </>
+      )}
+    </div>
+  );
+}
