@@ -7,6 +7,7 @@ import type { CandlesResult, Range } from "@/app/api/candles/route";
 import type { EarningsResult } from "@/app/api/earnings/route";
 import type { QuoteResult } from "@/app/api/quote/route";
 import EarningsResearch from "@/components/EarningsResearch";
+import NodeNews from "@/components/NodeNews";
 import { computeTechnicals, SIGNAL_COPY } from "@/lib/technicals";
 import { formatChangeAbs, formatChangePercent, formatDate, formatMarketCap, formatPrice, formatTimestamp } from "@/lib/format";
 import { useTheme } from "@/hooks/useTheme";
@@ -249,6 +250,8 @@ export default function StockDetail({
             Company site ↗
           </a>
         )}
+
+        <NodeNews symbol={symbol} companyName={name} />
 
         <div className="tech-block">
           <h3>Technical signals</h3>
