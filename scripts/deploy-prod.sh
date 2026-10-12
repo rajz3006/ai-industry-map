@@ -5,7 +5,10 @@
 #   1. Shows what's about to ship (branch, commit, any uncommitted local changes —
 #      `vercel --prod` deploys whatever's on disk right now, not necessarily HEAD).
 #   2. Builds + deploys to Vercel production (`vercel --prod`).
-#   3. Points myaiprobe.vercel.app at the new deployment (`vercel alias set`).
+#   3. Confirms myaiprobe.vercel.app now points at the deployment that just shipped.
+#      No separate `vercel alias set` step is needed: myaiprobe.vercel.app is already
+#      assigned to this project's Production environment in Vercel, and `vercel --prod`
+#      re-aliases every domain assigned to Production on each successful deploy.
 #
 # Usage:
 #   ./scripts/deploy-prod.sh          # asks for confirmation first
@@ -27,23 +30,29 @@ fi
 echo
 
 if [[ "$AUTO_YES" != true ]]; then
-  read -r -p "Deploy to Vercel production and alias to ${ALIAS_DOMAIN}? [y/N] " reply
+  read -r -p "Deploy to Vercel production (${ALIAS_DOMAIN})? [y/N] " reply
   [[ "$reply" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 1; }
 fi
 
 echo "Deploying to Vercel production..."
-# vercel writes build/progress logs to stderr and the final deployment URL to stdout,
-# so this captures just the URL while you still see the build log live.
-DEPLOY_URL=$(vercel --prod --yes)
+# Streamed directly (not captured into a variable) — some environments wrap `vercel`'s
+# output (e.g. a CLI-integration plugin), so parsing its stdout for the deployment URL
+# isn't reliable. We confirm success below via a fresh `vercel inspect` instead.
+vercel --prod --yes
 
-if [[ -z "$DEPLOY_URL" ]]; then
-  echo "✗ Deploy did not return a URL — check the output above." >&2
+echo
+echo "Confirming ${ALIAS_DOMAIN} points at the deployment that just shipped..."
+INSPECT_OUT=$(vercel inspect "$ALIAS_DOMAIN" 2>&1)
+DEPLOYED_AT=$(echo "$INSPECT_OUT" | grep -m1 '^\s*created' || true)
+STATUS_LINE=$(echo "$INSPECT_OUT" | grep -m1 '^\s*status' || true)
+
+echo "$STATUS_LINE"
+echo "$DEPLOYED_AT"
+
+if ! echo "$STATUS_LINE" | grep -q "Ready"; then
+  echo "✗ ${ALIAS_DOMAIN} isn't showing as Ready — check 'vercel inspect ${ALIAS_DOMAIN}' manually." >&2
   exit 1
 fi
-echo "Deployed: $DEPLOY_URL"
-
-echo "Aliasing ${ALIAS_DOMAIN} -> ${DEPLOY_URL}..."
-vercel alias set "$DEPLOY_URL" "$ALIAS_DOMAIN"
 
 echo
 echo "✓ Live at https://${ALIAS_DOMAIN}"
