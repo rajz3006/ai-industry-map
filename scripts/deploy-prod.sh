@@ -18,6 +18,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ALIAS_DOMAIN="myaiprobe.vercel.app"
+# Without an explicit scope, `vercel --prod` can resolve to the wrong default scope in some
+# environments and fail deploy with "Not authorized" even though `vercel whoami` and reads
+# (e.g. `vercel inspect`) succeed. Read commands apparently fall back to a project-linked
+# scope that the deploy path doesn't, so pin it explicitly everywhere.
+VERCEL_SCOPE="rajz117"
 AUTO_YES=false
 [[ "${1:-}" == "--yes" ]] && AUTO_YES=true
 
@@ -38,11 +43,11 @@ echo "Deploying to Vercel production..."
 # Streamed directly (not captured into a variable) — some environments wrap `vercel`'s
 # output (e.g. a CLI-integration plugin), so parsing its stdout for the deployment URL
 # isn't reliable. We confirm success below via a fresh `vercel inspect` instead.
-vercel --prod --yes
+vercel --prod --yes --scope "$VERCEL_SCOPE"
 
 echo
 echo "Confirming ${ALIAS_DOMAIN} points at the deployment that just shipped..."
-INSPECT_OUT=$(vercel inspect "$ALIAS_DOMAIN" 2>&1)
+INSPECT_OUT=$(vercel inspect "$ALIAS_DOMAIN" --scope "$VERCEL_SCOPE" 2>&1)
 DEPLOYED_AT=$(echo "$INSPECT_OUT" | grep -m1 '^\s*created' || true)
 STATUS_LINE=$(echo "$INSPECT_OUT" | grep -m1 '^\s*status' || true)
 
