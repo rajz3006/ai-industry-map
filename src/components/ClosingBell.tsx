@@ -7,7 +7,7 @@ import {
   computeRMultiple,
   computeStopPrice,
 } from "@/lib/tradeSizing";
-import { changeDirection, formatChangePercent, formatPrice, formatRelativeTime } from "@/lib/format";
+import { changeDirection, formatChangePercent, formatPrice, formatRelativeTime, formatTimestamp, ordinal } from "@/lib/format";
 import type { ClosingCandidate, ClosingFilters, DropBasis } from "@/app/api/closing/route";
 
 type StopMode = "vol" | "fixed";
@@ -546,12 +546,31 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
                     Technicals: {c.technicalsVerdict} ({c.technicalsScore.toFixed(1)}/5)
                   </span>
                   <span className="cb-offhigh">Off day high {formatChangePercent(c.offHighPct)}</span>
+                  {c.peerValuation && (
+                    <span className="cb-verdict cb-peer">
+                      vs. {c.layer} peers: {ordinal(c.peerValuation.percentile)} pct on {c.peerValuation.metric} (
+                      {c.peerValuation.value.toFixed(1)}x)
+                    </span>
+                  )}
                 </div>
                 <ul className="cb-reasons">
                   {c.reasons.map((r, i) => (
                     <li key={i}>{r}</li>
                   ))}
                 </ul>
+                {c.topHeadline ? (
+                  <p className="cb-headline">
+                    <a href={c.topHeadline.url} target="_blank" rel="noopener noreferrer">
+                      {c.topHeadline.headline}
+                    </a>
+                    <span className="cb-headline-source">
+                      {" "}
+                      — {c.topHeadline.source} · {formatTimestamp(c.topHeadline.datetime)}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="cb-headline cb-headline-empty">No recent trusted headline found for {c.symbol}.</p>
+                )}
               </li>
             ))}
           </ul>

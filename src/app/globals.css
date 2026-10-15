@@ -4241,6 +4241,23 @@ table.ev-table {
   font-size: 12px;
   line-height: 1.55;
 }
+.cb-headline {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+.cb-headline a {
+  color: var(--source);
+}
+.cb-headline a:hover {
+  color: var(--source-hover);
+}
+.cb-headline-source {
+  color: var(--muted);
+}
+.cb-headline-empty {
+  color: var(--muted);
+  font-style: italic;
+}
 @media (max-width: 720px) {
   .cb-head {
     flex-direction: column;

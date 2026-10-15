@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { allTickerRows } from "@/data/tickers";
-import { loadBarSet, nodeMeta } from "@/lib/moversData";
+import { loadBarSet, nodeMeta, computeSessionMovers } from "@/lib/moversData";
 import { loadEvaluationBars } from "@/lib/evaluation/evalBars";
 import { evaluateSymbol } from "@/lib/evaluation/score";
+import { fetchLayerMultiples, rankPeerValuation, type LayerMultiples, type PeerValuation } from "@/lib/evaluation/peerValuation";
+import { fetchTrustedCompanyNews } from "@/lib/companyNews";
 import { mapWithConcurrency } from "@/lib/finnhub";
 import { AlpacaError } from "@/lib/alpaca";
 import { LIVE_FUNDAMENTALS_ONLY_OPTIONS, type StepVerdict } from "@/lib/evaluation/types";
+import type { NewsArticle } from "@/app/api/news/route";
+import { ordinal } from "@/lib/format";
 
 // The intraday dip screen behind the Stock Picker tab: stocks that dropped in today's
 // session so far (on the latest available price, not just the close), filtered to names
@@ -51,6 +55,17 @@ export interface ClosingCandidate {
   compositeScore: number;
   compositeVerdict: StepVerdict;
   trailingStdDevPct: number | null;
+  /** This symbol's layer's average % change today (from the same session movers math the
+   * Daily movers tab uses), for judging whether the drop is sector-wide or stock-specific.
+   * Null if the layer's average couldn't be computed (e.g. too few peers with bar data). */
+  layerAvgChangePct: number | null;
+  /** Where this symbol's valuation multiple sits vs. its own industry-layer peers — an
+   * additive signal alongside Step 4's fixed-band verdict, not a replacement for it. Null
+   * when there isn't enough peer data for a percentile to mean anything. */
+  peerValuation: PeerValuation | null;
+  /** Most recent trusted-source headline for this symbol, if any — surfaced inline so a
+   * drop's reason can be sanity-checked without leaving the list. */
+  topHeadline: NewsArticle | null;
   reasons: string[];
 }
 
@@ -164,6 +179,38 @@ function fmtPct(x: number): string {
   return `${x >= 0 ? "+" : ""}${x.toFixed(2)}%`;
 }
 
+function fmtX(x: number): string {
+  return `${x.toFixed(1)}x`;
+}
+
+// Below this, a layer's average move is normal day-to-day noise, not a real theme worth
+// calling out either way.
+const LAYER_MOVE_FLOOR_PCT = 1;
+// Within 1.5x its own layer's average drop, a stock's move looks like sector beta rather
+// than something specific to it.
+const SECTOR_BETA_RATIO = 1.5;
+// At least this many points worse than the layer average before flagging underperformance —
+// avoids calling out noise-level gaps between a stock and its peers.
+const UNDERPERFORM_GAP_PCT = 1;
+
+/** Classifies a (necessarily negative, since every candidate already cleared the drop
+ * filter) change vs. its layer's average move today: part of a broad, layer-wide selloff,
+ * or an outlier worth a closer look. Returns null for the ambiguous middle rather than
+ * forcing a label onto a move that isn't clearly either. */
+function dropContextReason(stockChangePct: number, layerAvgChangePct: number | null, layer: string): string | null {
+  if (layerAvgChangePct === null) return null;
+  const layerMoved = Math.abs(layerAvgChangePct) >= LAYER_MOVE_FLOOR_PCT;
+  const sameDirection = layerAvgChangePct < 0;
+
+  if (layerMoved && sameDirection && Math.abs(stockChangePct) / Math.abs(layerAvgChangePct) <= SECTOR_BETA_RATIO) {
+    return `Part of a broader ${layer} selloff today — the layer averaged ${fmtPct(layerAvgChangePct)}, so this reads more like sector beta than a stock-specific drop.`;
+  }
+  if (stockChangePct <= layerAvgChangePct - UNDERPERFORM_GAP_PCT) {
+    return `Underperforming its own ${layer} peers today (they averaged ${fmtPct(layerAvgChangePct)}) — worth checking the headline below for a stock-specific reason.`;
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   try {
     const filters = parseFilters(new URL(request.url).searchParams);
@@ -236,6 +283,21 @@ export async function GET(request: Request) {
         ? rows.filter((r) => r.zScore !== null && r.zScore <= -filters.minZScore)
         : rows.filter((r) => r.changePct <= -filters.minDropPct);
 
+    // Per-layer average move today (same math the Daily movers tab uses) and per-layer
+    // valuation-multiple snapshots, computed once per distinct layer touched by `dropped`
+    // rather than once per candidate — several candidates often share a layer, and this
+    // keeps worst-case Finnhub call volume bounded to "layers touched," not "candidates ×
+    // peers per layer."
+    const prevDate = dates[dates.length - 2];
+    const { categoryTrends } = computeSessionMovers(bySymbol, sessionDate, prevDate);
+    const layerAvgMap = new Map(categoryTrends.map((t) => [t.layer, t.avgChangePercent]));
+
+    const neededLayers = Array.from(new Set(dropped.map((r) => r.layer)));
+    const layerSnapshots = new Map<string, Map<string, LayerMultiples>>();
+    await mapWithConcurrency(neededLayers, 2, async (layer) => {
+      layerSnapshots.set(layer, await fetchLayerMultiples(layer));
+    });
+
     type EvalOutcome =
       | { kind: "candidate"; candidate: ClosingCandidate }
       | { kind: "excluded"; reason: "data-gap" | "quality" }
@@ -278,12 +340,25 @@ export async function GET(request: Request) {
 
         if (!passes) return { kind: "excluded", reason: hasDataGap ? "data-gap" : "quality" };
 
+        const layerAvgChangePct = layerAvgMap.get(r.layer) ?? null;
+        const peerValuation = rankPeerValuation(r.symbol, layerSnapshots.get(r.layer) ?? new Map());
+        const topHeadline = await fetchTrustedCompanyNews(r.symbol)
+          .then((res) => res.articles[0] ?? null)
+          .catch(() => null);
+
         const reasons = [
           `Down ${fmtPct(r.changePct)} in the session${r.zScore !== null ? ` (${r.zScore.toFixed(1)}σ vs its own 20-day volatility)` : ""}${r.offHighPct <= -0.5 ? `, fading ${fmtPct(r.offHighPct)} off the day high` : ""} (intraday range ${r.dayRangePct.toFixed(1)}%)`,
           `Fundamentals read ${entry.financialsVerdict} (${entry.financialsScore.toFixed(1)}/5 on financial-statement quality)`,
           `Valuation reads ${entry.valuationVerdict} (${entry.valuationScore.toFixed(1)}/5 — not just a quality dip, not obviously overpriced for it either)`,
           `Technicals read ${entry.technicalsVerdict} (${entry.technicalsScore.toFixed(1)}/5 on chart/indicators)`,
         ];
+        if (peerValuation) {
+          reasons.push(
+            `Trading at ${fmtX(peerValuation.value)} ${peerValuation.metric}, cheaper than ${peerValuation.cheaperThanCount} of ${peerValuation.peerCount} ${r.layer} peers (${ordinal(peerValuation.percentile)} percentile — higher is cheaper)`
+          );
+        }
+        const dropContext = dropContextReason(r.changePct, layerAvgChangePct, r.layer);
+        if (dropContext) reasons.push(dropContext);
 
         return {
           kind: "candidate",
@@ -306,6 +381,9 @@ export async function GET(request: Request) {
             compositeScore: entry.compositeScore,
             compositeVerdict: entry.compositeVerdict,
             trailingStdDevPct: r.trailingStdDevPct,
+            layerAvgChangePct,
+            peerValuation,
+            topHeadline,
             reasons,
           },
         };
@@ -316,7 +394,12 @@ export async function GET(request: Request) {
 
     const candidates = (
       outcomes.filter((o): o is { kind: "candidate"; candidate: ClosingCandidate } => o.kind === "candidate").map((o) => o.candidate)
-    ).sort((a, b) => b.compositeScore - a.compositeScore || a.changePct - b.changePct); // deeper dip breaks ties
+    ).sort(
+      (a, b) =>
+        b.compositeScore - a.compositeScore || // quality first
+        a.changePct - b.changePct || // deeper dip breaks ties
+        (b.peerValuation?.percentile ?? -1) - (a.peerValuation?.percentile ?? -1) // cheaper-vs-peers breaks remaining ties
+    );
 
     const excludedForDataGap = outcomes.filter((o) => o.kind === "excluded" && o.reason === "data-gap").length;
     const excludedForQuality = outcomes.filter((o) => o.kind === "excluded" && o.reason === "quality").length;
