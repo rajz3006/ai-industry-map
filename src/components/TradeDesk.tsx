@@ -6,12 +6,17 @@ import { useTradingAccount } from "@/hooks/useTradingAccount";
 import { useTradingPositions } from "@/hooks/useTradingPositions";
 import { useTradeJournal, type TradeJournalStatus } from "@/hooks/useTradeJournal";
 import { useCompanyNews } from "@/hooks/useCompanyNews";
+import TradeChart from "@/components/TradeChart";
+import InfoTip from "@/components/InfoTip";
 import type { OpportunityRow } from "@/app/api/opportunities/route";
-import { buildTradeSetup } from "@/lib/tradeSizing";
+import { buildTradeSetup, type StopMode } from "@/lib/tradeSizing";
 import { changeDirection, formatChangePercent, formatPrice, formatRelativeTime, isForeignDenominated } from "@/lib/format";
 
 const DEFAULT_EQUITY = 5000;
 const DEFAULT_RISK_PCT = 1;
+const DEFAULT_PROFIT_PCT = 10;
+const DEFAULT_STOP_MODE: StopMode = "vol";
+const DEFAULT_STOP_PCT = 4;
 const POOR_R_MULTIPLE = 1.5;
 
 const STATUS_LABEL: Record<TradeJournalStatus, string> = {
@@ -37,8 +42,12 @@ export default function TradeDesk() {
   const { entries: journal, logTrade } = useTradeJournal();
 
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [symbolQuery, setSymbolQuery] = useState("");
   const [equity, setEquity] = useState(DEFAULT_EQUITY);
   const [riskPct, setRiskPct] = useState(DEFAULT_RISK_PCT);
+  const [profitPct, setProfitPct] = useState(DEFAULT_PROFIT_PCT);
+  const [stopMode, setStopMode] = useState<StopMode>(DEFAULT_STOP_MODE);
+  const [stopPct, setStopPct] = useState(DEFAULT_STOP_PCT);
   const [reasonNotes, setReasonNotes] = useState("");
   const [newsFor, setNewsFor] = useState<string | null>(null);
   const { data: newsData, loading: newsLoading, error: newsError } = useCompanyNews(newsFor);
@@ -65,14 +74,28 @@ export default function TradeDesk() {
       .slice(0, 25);
   }, [opData]);
 
+  // Free-form picker: any of the full tracked universe, not just the dip shortlist. Reuses
+  // the same opData rows (already has price/zScore/trailingStdDevPct for every US symbol),
+  // so selecting a result here drives the exact same trade-setup section below as the
+  // shortlist does — no separate data path or sizing logic needed.
+  const searchResults = useMemo(() => {
+    const q = symbolQuery.trim().toUpperCase();
+    if (!q || !opData) return [];
+    return opData.rows
+      .filter(
+        (r) => !isForeignDenominated(r.symbol) && (r.symbol.toUpperCase().includes(q) || r.name.toUpperCase().includes(q))
+      )
+      .slice(0, 10);
+  }, [opData, symbolQuery]);
+
   const selectedRow: OpportunityRow | null = selectedSymbol
     ? opData?.rows.find((r) => r.symbol === selectedSymbol) ?? null
     : null;
 
   const setup = useMemo(() => {
     if (!selectedRow) return null;
-    return buildTradeSetup(selectedRow, equity, riskPct);
-  }, [selectedRow, equity, riskPct]);
+    return buildTradeSetup(selectedRow, equity, riskPct, { stopMode, stopPct, profitPct });
+  }, [selectedRow, equity, riskPct, stopMode, stopPct, profitPct]);
 
   function toggleNews(symbol: string) {
     setNewsFor((prev) => (prev === symbol ? null : symbol));
@@ -82,6 +105,7 @@ export default function TradeDesk() {
     setSelectedSymbol(symbol);
     setReasonNotes("");
     setSubmitError(null);
+    setSymbolQuery("");
   }
 
   async function closePosition(symbol: string) {
@@ -158,10 +182,10 @@ export default function TradeDesk() {
       <div className="td-head">
         <h2>Trade Desk</h2>
         <p className="td-disclaimer">
-          <b>Paper trading only</b> — this account is a $5,000 Alpaca paper account, never live money. Suggested
-          levels below apply the house risk rules mechanically (1% risk per trade, a stop sized to 2x the stock&rsquo;s
-          own trailing volatility, a +10% lock-in profit target) — they are arithmetic, not investment advice.
-          Review every level before placing a trade.
+          <b>Paper trading only</b> — this account is a $5,000 Alpaca paper account, never live money. Levels below
+          default to the house risk rules (1% risk per trade, a stop sized to 2x the stock&rsquo;s own trailing
+          volatility, a +10% lock-in profit target) but every input — equity, risk %, profit target, and stop mode —
+          is yours to tune. They are arithmetic, not investment advice. Review every level before placing a trade.
         </p>
       </div>
 
@@ -233,6 +257,55 @@ export default function TradeDesk() {
       </section>
 
       <section className="td-panel">
+        <h3>Search any symbol</h3>
+        <p className="td-panel-note">
+          Not limited to the shortlist below — configure a trade for any tracked symbol, not just today&rsquo;s dip
+          candidates.
+        </p>
+        <input
+          type="text"
+          className="td-symbol-search"
+          placeholder="Search by ticker or company name…"
+          value={symbolQuery}
+          onChange={(e) => setSymbolQuery(e.target.value)}
+        />
+        {opError && symbolQuery.trim() && <p className="td-error">Couldn&rsquo;t load symbol data: {opError}</p>}
+        {opLoading && !opData && symbolQuery.trim() && <p className="td-loading">Loading symbol data…</p>}
+        {opData && symbolQuery.trim() && searchResults.length === 0 && (
+          <p className="td-empty">No tracked symbol matches &ldquo;{symbolQuery.trim()}&rdquo;.</p>
+        )}
+        {searchResults.length > 0 && (
+          <ul className="td-list">
+            {searchResults.map((r) => (
+              <li key={r.symbol} className={`td-row ${selectedSymbol === r.symbol ? "active" : ""}`}>
+                <div className="td-row-top">
+                  <span className="td-row-name">
+                    <span className="mv-row-co">{r.name}</span>
+                    <span className="mv-row-layer">{r.layer}</span>
+                  </span>
+                  <span className="td-row-price">
+                    <span className="mv-row-symbol">{r.symbol}</span>
+                    <span className="mv-row-amt">{formatPrice(r.price, r.symbol)}</span>
+                    <span className={`chg ${changeDirection(r.changePercent)}`}>
+                      {formatChangePercent(r.changePercent)}
+                    </span>
+                  </span>
+                </div>
+                <div className="td-row-meta">
+                  <span className={`op-zscore ${r.zScore !== null && r.zScore >= 0 ? "up" : "down"}`}>
+                    {fmtZScore(r.zScore)}
+                  </span>
+                  <button className="op-size-btn" onClick={() => selectRow(r.symbol)}>
+                    Configure trade
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="td-panel">
         <h3>Shortlist — today&rsquo;s dip candidates</h3>
         <p className="td-panel-note">Same universe and z-scores as the Opportunities screener.</p>
         {opError && <p className="td-error">Couldn&rsquo;t load shortlist: {opError}</p>}
@@ -275,7 +348,10 @@ export default function TradeDesk() {
 
           <div className="td-setup-inputs">
             <label className="op-filter">
-              <span>Account equity ($)</span>
+              <span>
+                Account equity ($)
+                <InfoTip text="Capital this ticket sizes against — not necessarily your whole account. It scales position size and risk budget directly, so lowering it sizes every trade down proportionally." />
+              </span>
               <input
                 type="number"
                 min={0}
@@ -285,7 +361,10 @@ export default function TradeDesk() {
               />
             </label>
             <label className="op-filter">
-              <span>Risk per trade (%)</span>
+              <span>
+                Risk per trade (%)
+                <InfoTip text="Max % of account equity this trade can lose if the stop is hit. House rule is 1%. Keep it low (0.5-2%) so one stop-out doesn't meaningfully dent the account — raising it buys more shares but makes a loss hurt more." />
+              </span>
               <input
                 type="number"
                 min={0.1}
@@ -295,11 +374,69 @@ export default function TradeDesk() {
                 onChange={(e) => setRiskPct(Number(e.target.value) || 0)}
               />
             </label>
+            <label className="op-filter">
+              <span>
+                Profit target (%)
+                <InfoTip text="Price above entry where the bracket order takes profit (the lock-in exit). House default is +10%. The informational ceiling below is always 2x this target — a discipline cap on how far a winner is allowed to run, not a real order." />
+              </span>
+              <input
+                type="number"
+                min={0.5}
+                max={500}
+                step={1}
+                value={profitPct}
+                onChange={(e) => setProfitPct(Math.min(500, Math.max(0.5, Number(e.target.value) || 0.5)))}
+              />
+            </label>
+            <div className="op-filter">
+              <span>
+                Stop mode
+                <InfoTip text="Volatility (2σ) sets the stop at 2x the stock's own trailing 20-day volatility — wider for choppy names, tighter for calm ones, and adapts automatically. Fixed % uses the same flat distance for every stock. Volatility is the better default; use Fixed % for a predictable distance or when a symbol lacks enough price history to compute volatility." />
+              </span>
+              <div className="cb-radio-row" role="radiogroup" aria-label="Stop mode">
+                <label>
+                  <input
+                    type="radio"
+                    name="td-stop-mode"
+                    checked={stopMode === "vol"}
+                    onChange={() => setStopMode("vol")}
+                  />
+                  Volatility (2σ)
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="td-stop-mode"
+                    checked={stopMode === "fixed"}
+                    onChange={() => setStopMode("fixed")}
+                  />
+                  Fixed %
+                </label>
+              </div>
+            </div>
+            {stopMode === "fixed" && (
+              <label className="op-filter">
+                <span>
+                  Stop distance (%)
+                  <InfoTip text="How far below entry the stop sits, as a flat percentage. Too tight and normal daily noise stops you out early; too wide and a loss costs more than intended. 2-5% is reasonable for most liquid names — switch to Volatility mode first to see what the stock's own trailing moves actually look like before picking a number." />
+                </span>
+                <input
+                  type="number"
+                  min={0.5}
+                  max={50}
+                  step={0.5}
+                  value={stopPct}
+                  onChange={(e) => setStopPct(Math.min(50, Math.max(0.5, Number(e.target.value) || 0.5)))}
+                />
+              </label>
+            )}
           </div>
 
           {!setup && (
             <p className="td-empty">
-              Not enough trailing volatility history for {selectedRow.symbol} to size a trade.
+              {stopMode === "vol"
+                ? `Not enough trailing volatility history for ${selectedRow.symbol} to size a trade — switch to fixed %.`
+                : `Risk budget buys zero shares at this stop distance for ${selectedRow.symbol} — raise equity or risk %, or tighten the stop.`}
             </p>
           )}
 
@@ -328,11 +465,11 @@ export default function TradeDesk() {
                   <dd>{formatPrice(setup.size.riskBudget, "USD")}</dd>
                 </div>
                 <div>
-                  <dt>Take-profit (lock-in, +10%)</dt>
+                  <dt>Take-profit (lock-in, +{profitPct}%)</dt>
                   <dd>{formatPrice(setup.targets.lockIn, selectedRow.symbol)}</dd>
                 </div>
                 <div>
-                  <dt>Ceiling (+20%, informational)</dt>
+                  <dt>Ceiling (+{profitPct * 2}%, informational)</dt>
                   <dd className="td-dim">{formatPrice(setup.targets.ceiling, selectedRow.symbol)}</dd>
                 </div>
                 <div>
@@ -351,6 +488,16 @@ export default function TradeDesk() {
                   </dd>
                 </div>
               </dl>
+
+              <TradeChart
+                symbol={selectedRow.symbol}
+                levels={{
+                  entry: setup.entryPrice,
+                  stop: setup.stopPrice,
+                  target: setup.targets.lockIn,
+                  ceiling: setup.targets.ceiling,
+                }}
+              />
 
               <button className="mv-news-toggle" onClick={() => toggleNews(selectedRow.symbol)}>
                 {newsFor === selectedRow.symbol ? "Hide headlines" : "Top headlines"}

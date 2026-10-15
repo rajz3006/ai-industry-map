@@ -1189,6 +1189,64 @@ table.mk-table {
   text-align: center;
   padding: 0 20px;
 }
+.tc-wrap {
+  margin: 8px 0 18px;
+}
+.tc-chart-box {
+  height: 220px;
+  position: relative;
+}
+.tc-band {
+  position: absolute;
+  left: 0;
+  right: 56px; /* leave the right price-axis labels unobscured */
+  pointer-events: none;
+  z-index: 1;
+}
+.tc-band-risk {
+  background: color-mix(in srgb, var(--risk) 14%, transparent);
+}
+.tc-band-reward {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+.tc-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 0 20px;
+}
+.tc-legend {
+  display: flex;
+  gap: 16px;
+  margin: 6px 0 0;
+  font: 500 10px "DM Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tc-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.tc-legend-item::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.tc-legend-risk::before {
+  background: color-mix(in srgb, var(--risk) 35%, transparent);
+}
+.tc-legend-reward::before {
+  background: color-mix(in srgb, var(--green) 35%, transparent);
+}
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2656,6 +2714,59 @@ table.mk-table {
   font-size: 12px;
   color: var(--ink);
 }
+
+/* Generic "i" tooltip badge — hover/focus reveals data-tip as a floating bubble. CSS-only,
+   no JS state, so it's cheap to drop next to any label across tabs. */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 5px;
+  border-radius: 50%;
+  border: 1px solid var(--border-input);
+  color: var(--muted);
+  font: 700 9px "DM Mono", monospace;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: help;
+  user-select: none;
+  vertical-align: middle;
+}
+.info-tip::before {
+  content: "i";
+}
+.info-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 0;
+  transform: translateX(-10%);
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font: 500 11px "DM Mono", monospace;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+  border-radius: 3px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 30;
+}
+.info-tip:hover::after,
+.info-tip:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
 .op-calc {
   margin-bottom: 26px;
   padding: 16px;
@@ -2809,6 +2920,23 @@ table.mk-table {
   margin: -6px 0 12px;
   color: var(--muted);
   font-size: 12px;
+}
+.td-symbol-search {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border-input);
+  border-radius: 2px;
+  padding: 7px 10px;
+  font: 500 13px "DM Mono", monospace;
+  color-scheme: light dark;
+  margin-bottom: 12px;
+}
+.td-symbol-search:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 .td-error {
   color: var(--risk);
@@ -3840,50 +3968,9 @@ table.ev-table {
   flex-direction: column;
   gap: 8px;
   align-items: flex-end;
-  min-width: 240px;
+  min-width: 160px;
 }
-.cb-clock {
-  border: 1px solid var(--border-input);
-  border-radius: 3px;
-  padding: 10px 14px;
-  background: var(--panel);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-}
-.cb-clock-label {
-  font: 500 10px "DM Mono", monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-.cb-clock-big {
-  font: 600 14px "DM Mono", monospace;
-  color: var(--ink);
-}
-.cb-clock.cb-open {
-  border-color: var(--green);
-}
-.cb-clock.cb-open .cb-clock-big {
-  color: var(--green);
-}
-.cb-clock.cb-soon .cb-clock-big {
-  color: var(--source);
-}
-.cb-notify-btn {
-  background: none;
-  border: 1px solid var(--border-input);
-  border-radius: 2px;
-  padding: 5px 10px;
-  color: var(--ink);
-  font: 500 11px "DM Mono", monospace;
-  cursor: pointer;
-}
-.cb-notify-btn:hover {
-  border-color: var(--focus);
-}
-.cb-notify-hint {
+.cb-asof {
   font-size: 11px;
   color: var(--muted);
 }
@@ -4054,6 +4141,10 @@ table.ev-table {
 }
 .cb-refresh-btn:hover {
   border-color: var(--focus);
+}
+.cb-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .cb-how {
   margin: 10px 0 0;

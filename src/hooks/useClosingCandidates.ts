@@ -11,9 +11,8 @@ export interface UseClosingCandidatesResult {
   refresh: () => void;
 }
 
-// The closing screen is timing-sensitive (it matters most in the 30 minutes before the
-// bell), so the shared copy goes stale after 5 minutes; the tab also exposes a manual
-// "re-run" button that calls refresh().
+// Prices move all session, so the shared copy goes stale after 5 minutes; the tab also
+// exposes a manual "refresh now" button that calls refresh().
 const STALE_MS = 5 * 60_000;
 
 async function fetchClosing(params: string): Promise<ClosingResponse> {
@@ -25,7 +24,7 @@ async function fetchClosing(params: string): Promise<ClosingResponse> {
   return body as ClosingResponse;
 }
 
-/** End-of-day dip candidates: dropped in the session + fundamentals/technicals at or above
+/** Intraday dip candidates: dropped in the session so far + fundamentals/technicals at or above
  * the given thresholds, with transparent reasons. Each distinct filter combination gets its
  * own shared cache entry via the key. */
 export function useClosingCandidates(filters: ClosingFilters): UseClosingCandidatesResult {

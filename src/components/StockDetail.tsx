@@ -8,44 +8,13 @@ import type { EarningsMap } from "@/app/api/earnings/route";
 import type { QuoteMap } from "@/hooks/useQuotes";
 import EarningsResearch from "@/components/EarningsResearch";
 import NodeNews from "@/components/NodeNews";
+import { useApi } from "@/hooks/useApi";
 import { computeTechnicals, SIGNAL_COPY } from "@/lib/technicals";
 import { formatChangeAbs, formatChangePercent, formatDate, formatMarketCap, formatPrice, formatTimestamp } from "@/lib/format";
 import { useTheme } from "@/hooks/useTheme";
 import { CHART_THEME } from "@/lib/theme";
 
 const RANGES: Range[] = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y"];
-
-type Fetchable<T> = { data?: T; error?: string; loading: boolean };
-
-function useApi<T>(url: string | null): Fetchable<T> {
-  const [state, setState] = useState<Fetchable<T>>({ loading: !!url });
-
-  useEffect(() => {
-    if (!url) return;
-    let cancelled = false;
-    // Flip to a loading state whenever the target URL (symbol/range) changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setState({ loading: true });
-    fetch(url)
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelled) return;
-        if (json && typeof json === "object" && "error" in json) {
-          setState({ loading: false, error: json.error });
-        } else {
-          setState({ loading: false, data: json as T });
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setState({ loading: false, error: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [url]);
-
-  return state;
-}
 
 export default function StockDetail({
   symbol,

@@ -48,7 +48,7 @@ const TABS: TabDef[] = [
   { kind: "single", view: "markets", label: "Markets" },
   { kind: "single", view: "movers", label: "Daily movers" },
   { kind: "single", view: "opportunities", label: "Opportunities" },
-  { kind: "single", view: "closing", label: "Closing Bell" },
+  { kind: "single", view: "closing", label: "Stock Picker" },
   { kind: "single", view: "evaluator", label: "Evaluator" },
   { kind: "single", view: "trading", label: "Trade Desk" },
   { kind: "single", view: "backtest", label: "Fast Rotation" },

@@ -2,15 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useClosingCandidates } from "@/hooks/useClosingCandidates";
-import { useNowTick } from "@/hooks/useNowTick";
-import { requestNotificationPermission } from "@/hooks/usePriceAlerts";
-import { getMarketWindowState, formatCountdown, type MarketPhase } from "@/lib/marketClock";
 import {
   computePositionSize,
   computeRMultiple,
   computeStopPrice,
 } from "@/lib/tradeSizing";
-import { changeDirection, formatChangePercent, formatPrice } from "@/lib/format";
+import { changeDirection, formatChangePercent, formatPrice, formatRelativeTime } from "@/lib/format";
 import type { ClosingCandidate, ClosingFilters, DropBasis } from "@/app/api/closing/route";
 
 type StopMode = "vol" | "fixed";
@@ -32,8 +29,6 @@ const DEFAULT_PREFS: TicketPrefs = {
 };
 
 const PREFS_KEY = "cb-ticket-prefs";
-const NOTIFY_KEY = "cb-notify";
-const NOTIFIED_DATE_KEY = "cb-notified-date";
 const FILTERS_KEY = "cb-filters";
 
 const DEFAULT_FILTERS: ClosingFilters = {
@@ -96,21 +91,6 @@ function loadPrefs(): TicketPrefs {
   }
 }
 
-function phaseLabel(phase: MarketPhase): string {
-  switch (phase) {
-    case "pre":
-      return "Pre-market";
-    case "open":
-      return "Market open";
-    case "window":
-      return "Closing window open";
-    case "closed":
-      return "Market closed";
-    case "weekend":
-      return "Weekend";
-  }
-}
-
 function verdictTone(v: string): "up" | "down" | "" {
   if (v === "strong" || v === "good") return "up";
   if (v === "weak" || v === "poor") return "down";
@@ -122,33 +102,20 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
   const [draftFilters, setDraftFilters] = useState<ClosingFilters>(DEFAULT_FILTERS);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
   const { data, loading, error, refresh } = useClosingCandidates(appliedFilters);
-  useNowTick(15_000);
 
   const [prefs, setPrefs] = useState<TicketPrefs>(DEFAULT_PREFS);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
-  const [notifyOn, setNotifyOn] = useState(false);
-  const [notifyState, setNotifyState] = useState<string>("unknown");
   const [placing, setPlacing] = useState(false);
   const [placeResult, setPlaceResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     const stored = loadPrefs();
     const storedFilters = loadFilters();
-    let notify = false;
-    let perm = "unknown";
-    try {
-      notify = window.localStorage.getItem(NOTIFY_KEY) === "1";
-      perm = "Notification" in window ? Notification.permission : "unsupported";
-    } catch {
-      /* private mode etc. — notify stays off */
-    }
     // Hydration-safe init: the first render uses defaults on both server and client.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrefs(stored);
     setPrefsLoaded(true);
-    setNotifyOn(notify);
-    setNotifyState(perm);
     setAppliedFilters(storedFilters);
     setDraftFilters(storedFilters);
     setFiltersLoaded(true);
@@ -171,49 +138,6 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
       /* ignore */
     }
   }, [prefs, prefsLoaded]);
-
-  // Recomputed on every render; useNowTick(15s) above keeps the countdown live.
-  // eslint-disable-next-line react-hooks/purity -- Date.now() in render is this hook's documented pattern
-  const windowState = getMarketWindowState(Date.now());
-
-  // Fire the "window is open" notification once per New-York day, only if the user opted in.
-  useEffect(() => {
-    if (!notifyOn || notifyState !== "granted") return;
-    const st = getMarketWindowState(Date.now());
-    if (st.phase !== "window") return;
-    try {
-      const today = st.nyDate;
-      if (window.localStorage.getItem(NOTIFIED_DATE_KEY) === today) return;
-      window.localStorage.setItem(NOTIFIED_DATE_KEY, today);
-      new Notification("Closing window is open", {
-        body: "The final 30 minutes before the bell — the end-of-day screen is live.",
-      });
-    } catch {
-      /* Notification construction can throw in some contexts */
-    }
-  }, [notifyOn, notifyState, windowState.phase]);
-
-  async function toggleNotify() {
-    if (notifyOn) {
-      setNotifyOn(false);
-      try {
-        window.localStorage.setItem(NOTIFY_KEY, "0");
-      } catch {
-        /* ignore */
-      }
-      return;
-    }
-    const perm = await requestNotificationPermission();
-    setNotifyState(perm);
-    if (perm === "granted") {
-      setNotifyOn(true);
-      try {
-        window.localStorage.setItem(NOTIFY_KEY, "1");
-      } catch {
-        /* ignore */
-      }
-    }
-  }
 
   const selected: ClosingCandidate | null = useMemo(
     () => (selectedSymbol ? data?.candidates.find((c) => c.symbol === selectedSymbol) ?? null : null),
@@ -300,42 +224,26 @@ export default function ClosingBell({ onOpenStock }: { onOpenStock: (symbol: str
     }
   }
 
-  const phase = windowState.phase;
-  const bannerTone = phase === "window" ? "open" : phase === "open" ? "soon" : "off";
-
   return (
     <div className="cb-wrap">
       <div className="cb-head">
         <div>
-          <h2>Closing Bell — end-of-day setup</h2>
+          <h2>Stock Picker</h2>
           <p className="cb-disclaimer">
-            In the final <b>30 minutes before the 4:00 PM ET close</b>, this tab screens for stocks that{" "}
-            <b>dropped in today&rsquo;s session</b> while their <b>fundamentals</b> (financial-statement quality),{" "}
-            <b>valuation</b> (not obviously overpriced for the dip), and <b>technicals</b> (chart indicators) all
-            clear your thresholds. It is a screening tool that narrows a watchlist, <b>not a recommendation</b> — a
-            dip can keep dipping. Nothing here is investment advice, and orders placed from the ticket below are
-            paper trades.
+            Screens today&rsquo;s session on the latest available price, any time the market is open — it is not
+            tied to the close. It looks for stocks that <b>dropped in today&rsquo;s session</b> while their{" "}
+            <b>fundamentals</b> (financial-statement quality), <b>valuation</b> (not obviously overpriced for the
+            dip), and <b>technicals</b> (chart indicators) all clear your thresholds. It is a screening tool that
+            narrows a watchlist, <b>not a recommendation</b> — a dip can keep dipping, and today&rsquo;s price can
+            still move before the bell. Nothing here is investment advice, and orders placed from the ticket below
+            are paper trades.
           </p>
         </div>
         <div className="cb-clock-wrap">
-          <div className={`cb-clock cb-${bannerTone}`}>
-            <span className="cb-clock-label">{phaseLabel(phase)} · {windowState.nyTime} ET</span>
-            {phase === "window" && (
-              <span className="cb-clock-big">Window open — {formatCountdown(windowState.msToClose)} to the bell</span>
-            )}
-            {(phase === "open" || phase === "pre") && windowState.msToWindow > 0 && (
-              <span className="cb-clock-big">Window opens in {formatCountdown(windowState.msToWindow)}</span>
-            )}
-            {(phase === "closed" || phase === "weekend") && (
-              <span className="cb-clock-big">Showing the last session — next window in {formatCountdown(windowState.msToWindow)}</span>
-            )}
-          </div>
-          <button className="cb-notify-btn" onClick={toggleNotify}>
-            {notifyOn ? "Window alerts on" : "Alert me at 3:30 PM ET"}
+          <button className="cb-refresh-btn" onClick={refresh} disabled={loading}>
+            {loading ? "Refreshing…" : "Refresh now"}
           </button>
-          {notifyState !== "granted" && notifyState !== "unknown" && !notifyOn && (
-            <span className="cb-notify-hint">Browser notifications {notifyState}.</span>
-          )}
+          {data && <span className="cb-asof">Updated {formatRelativeTime(new Date(data.asOf).getTime())}</span>}
         </div>
       </div>
 

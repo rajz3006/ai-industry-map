@@ -7,11 +7,12 @@ import { mapWithConcurrency } from "@/lib/finnhub";
 import { AlpacaError } from "@/lib/alpaca";
 import { LIVE_FUNDAMENTALS_ONLY_OPTIONS, type StepVerdict } from "@/lib/evaluation/types";
 
-// The end-of-day screen behind the Closing Bell tab: stocks that dropped in today's
-// session, filtered to names whose fundamentals (evaluation step 3), valuation (step 4),
-// and technicals (step 6) all read at or above the reader's thresholds, ranked by
-// composite quality. This is a screening tool, not a recommendation — every candidate
-// carries its reasons so the reader can judge.
+// The intraday dip screen behind the Stock Picker tab: stocks that dropped in today's
+// session so far (on the latest available price, not just the close), filtered to names
+// whose fundamentals (evaluation step 3), valuation (step 4), and technicals (step 6) all
+// read at or above the reader's thresholds, ranked by composite quality. This is a
+// screening tool, not a recommendation — every candidate carries its reasons so the reader
+// can judge.
 //
 // Uses LIVE_FUNDAMENTALS_ONLY_OPTIONS (skipExpensive: true, skipLiveFundamentals: false),
 // NOT the Evaluator tab's bulk-preview options. This route only ever evaluates symbols
@@ -135,7 +136,8 @@ function parseFilters(searchParams: URLSearchParams): ClosingFilters {
 const VOL_WINDOW = 20;
 const MIN_CLOSES_REQUIRED = VOL_WINDOW + 1;
 const EVAL_CONCURRENCY = 4;
-// Timing-sensitive near the close, so a shorter TTL than the Evaluator tab's 45 minutes.
+// Usable any time the market's open, so a shorter TTL than the Evaluator tab's 45 minutes
+// keeps verdicts from going stale mid-session.
 const EVAL_CACHE_TTL_MS = 10 * 60_000;
 
 interface EvalCacheEntry {
