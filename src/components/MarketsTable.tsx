@@ -5,6 +5,7 @@ import { nodeById } from "@/data/industry-map";
 import { allTickerRows } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
 import { useNowTick } from "@/hooks/useNowTick";
+import { useEntryRanges } from "@/hooks/useEntryRanges";
 import {
   changeDirection,
   formatChangePercent,
@@ -14,7 +15,18 @@ import {
   formatTimestamp,
 } from "@/lib/format";
 
-type SortKey = "name" | "layer" | "ticker" | "price" | "chgPct" | "range" | "asOf";
+type SortKey = "name" | "layer" | "ticker" | "price" | "chgPct" | "range" | "fundEntry" | "techEntry" | "asOf";
+
+// How today's day-low (falling back to current price before the first low is known) compares
+// to a computed entry range — purely a reference, not a buy signal.
+type EntryTouchStatus = "below" | "touched" | "above" | null;
+
+function entryTouchStatus(dayLow: number | undefined, priceLow: number, priceHigh: number): EntryTouchStatus {
+  if (typeof dayLow !== "number") return null;
+  if (dayLow < priceLow) return "below";
+  if (dayLow <= priceHigh) return "touched";
+  return "above";
+}
 
 const ALL_CATEGORIES = "All";
 
@@ -36,6 +48,7 @@ export default function MarketsTable({
   useNowTick(10_000); // keeps the "updated Xs/m ago" text below fresh
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "chgPct", dir: -1 });
   const [category, setCategory] = useState<string>(ALL_CATEGORIES);
+  const { data: entryRangeData } = useEntryRanges();
 
   const rows = useMemo(() => {
     return allTickerRows.map((r) => {
@@ -43,6 +56,13 @@ export default function MarketsTable({
       const q = r.isUS ? quotes[r.symbol] : undefined;
       const live = q && !("error" in q) ? q : undefined;
       const errored = !!q && "error" in q;
+      const symbolRanges = entryRangeData?.entries[r.symbol];
+      const fundEntry = symbolRanges?.fundamental;
+      const fundRange = fundEntry?.status === "ready" ? fundEntry.range : null;
+      const fundTouch = fundRange ? entryTouchStatus(live?.low ?? live?.price, fundRange.priceLow, fundRange.priceHigh) : null;
+      const techEntry = symbolRanges?.technical;
+      const techRange = techEntry?.status === "ready" ? techEntry.range : null;
+      const techTouch = techRange ? entryTouchStatus(live?.low ?? live?.price, techRange.priceLow, techRange.priceHigh) : null;
       return {
         nodeId: r.nodeId,
         name: n?.name ?? r.nodeId,
@@ -58,9 +78,15 @@ export default function MarketsTable({
         low: live?.low,
         high: live?.high,
         timestamp: live?.timestamp,
+        fundUnavailable: fundEntry?.status === "unavailable",
+        fundRange,
+        fundTouch,
+        techUnavailable: techEntry?.status === "unavailable",
+        techRange,
+        techTouch,
       };
     });
-  }, [quotes]);
+  }, [quotes, entryRangeData]);
 
   const categories = useMemo(() => {
     const seen = new Set<string>();
@@ -109,6 +135,17 @@ export default function MarketsTable({
           av = a.price;
           bv = b.price;
           break;
+        case "fundEntry":
+        case "techEntry": {
+          // Deepest "below range" first, then "touched," then "above"/unknown — i.e. the
+          // most clearly-in-the-zone candidates sort to the top. Expressed as (priceHigh -
+          // dayLow): the bigger the gap below the ceiling, the stronger/deeper the touch.
+          const aRange = sort.key === "fundEntry" ? a.fundRange : a.techRange;
+          const bRange = sort.key === "fundEntry" ? b.fundRange : b.techRange;
+          av = aRange && typeof a.low === "number" ? aRange.priceHigh - a.low : -Infinity;
+          bv = bRange && typeof b.low === "number" ? bRange.priceHigh - b.low : -Infinity;
+          break;
+        }
         case "asOf":
           av = a.timestamp;
           bv = b.timestamp;
@@ -145,6 +182,21 @@ export default function MarketsTable({
           {formatPollLabel(pollMs)}
         </span>
       </div>
+      <p className="mk-entry-note">
+        Two independent entry-range reads, kept separate on purpose so you can see whether they agree.{" "}
+        <b>Fundamental range</b> comes purely from each company&rsquo;s own numbers — financial-statement quality,
+        its valuation multiple, and recent news/market context. Recomputed once a day and cached, not live.{" "}
+        <b>Technical range</b> comes purely from its chart — the 20-day Bollinger lower band, adjusted by the
+        trend/RSI/volume read — recomputed live every refresh. Neither uses risk/reward sizing (that&rsquo;s the
+        Trade Desk&rsquo;s job). &ldquo;Touched&rdquo; means today&rsquo;s low reached at or below that range&rsquo;s
+        top — a reference point, not a recommendation.
+        {entryRangeData && entryRangeData.computedToday < entryRangeData.totalSymbols && (
+          <span className="mk-entry-progress">
+            {" "}
+            Computing today&rsquo;s fundamental ranges: {entryRangeData.computedToday}/{entryRangeData.totalSymbols}…
+          </span>
+        )}
+      </p>
       <div className="mk-categories" role="tablist" aria-label="Filter by category">
         {categories.map((c) => (
           <button
@@ -175,6 +227,12 @@ export default function MarketsTable({
                 Change
               </th>
               <th className="num">Day range</th>
+              <th className="num" onClick={() => toggleSort("fundEntry")}>
+                Fundamental range
+              </th>
+              <th className="num" onClick={() => toggleSort("techEntry")}>
+                Technical range
+              </th>
               <th onClick={() => toggleSort("asOf")}>As of</th>
             </tr>
           </thead>
@@ -224,6 +282,42 @@ export default function MarketsTable({
                       `${formatPrice(r.low, r.symbol)}–${formatPrice(r.high, r.symbol)}`
                     ) : (
                       <span className="exch">—</span>
+                    )}
+                  </td>
+                  <td className="num">
+                    {!r.isUS ? (
+                      <span className="exch">N/A</span>
+                    ) : r.fundRange ? (
+                      <span
+                        className={`mk-entry-cell ${r.fundTouch ?? ""}`}
+                        title={`vs. ${r.fundRange.metric} ${r.fundRange.currentMultiple.toFixed(1)}x`}
+                      >
+                        {formatPrice(r.fundRange.priceLow, r.symbol)}–{formatPrice(r.fundRange.priceHigh, r.symbol)}
+                        {r.fundTouch === "touched" && <span className="mk-entry-badge">touched</span>}
+                        {r.fundTouch === "below" && <span className="mk-entry-badge below">below</span>}
+                      </span>
+                    ) : r.fundUnavailable ? (
+                      <span className="exch">no data</span>
+                    ) : (
+                      <span className="exch">computing…</span>
+                    )}
+                  </td>
+                  <td className="num">
+                    {!r.isUS ? (
+                      <span className="exch">N/A</span>
+                    ) : r.techRange ? (
+                      <span
+                        className={`mk-entry-cell ${r.techTouch ?? ""}`}
+                        title={`Bollinger lower band ${formatPrice(r.techRange.bollingerLower, r.symbol)}`}
+                      >
+                        {formatPrice(r.techRange.priceLow, r.symbol)}–{formatPrice(r.techRange.priceHigh, r.symbol)}
+                        {r.techTouch === "touched" && <span className="mk-entry-badge">touched</span>}
+                        {r.techTouch === "below" && <span className="mk-entry-badge below">below</span>}
+                      </span>
+                    ) : r.techUnavailable ? (
+                      <span className="exch">no data</span>
+                    ) : (
+                      <span className="exch">computing…</span>
                     )}
                   </td>
                   <td className="exch">
