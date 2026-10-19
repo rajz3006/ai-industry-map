@@ -44,7 +44,9 @@ import type { RiskFreeRate } from "@/lib/fmp";
 export const ERP = 0.045; // equity risk premium over the 10Y Treasury (Damodaran long-run ~4-5%)
 const EXPLICIT_YEARS = 7; // DCF explicit projection window
 const TERMINAL_GROWTH = 0.025; // perpetual growth after year 7 (long-run nominal GDP-ish)
-const GROWTH_CAP = 0.12; // sustainable growth is capped — no business compounds at 30% forever
+const GROWTH_CAP = 0.2; // sustainable explicit-stage growth is capped — even the best
+// compounders fade; the bear scenario and the margin of safety carry the conservatism,
+// not an unrealistically low cap. Terminal growth stays at 2.5%.
 const GROWTH_FLOOR = 0.0; // never assume shrinkage in the base case; bear scenario handles it
 const CV_CYCLICAL_THRESHOLD = 0.6; // coeff. of variation above this => cyclical, normalize
 const MOS_BASE = 0.25; // base margin of safety applied by entryRange.ts (Graham's 20-30% convention)
@@ -88,9 +90,11 @@ function fmtMoney(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
-/** Two-stage DCF on a per-share owner-earnings stream. */
+/** Two-stage DCF on a per-share owner-earnings stream. The explicit-stage growth rate g may
+ * exceed the discount rate r — that is normal for a growing business; only the TERMINAL
+ * growth rate must be below r for the Gordon formula to converge, which is guarded here. */
 function dcfPerShare(oePerShare: number, g: number, r: number): number | null {
-  if (oePerShare <= 0 || r <= g || r <= TERMINAL_GROWTH) return null;
+  if (oePerShare <= 0 || r <= TERMINAL_GROWTH) return null;
   let pv = 0;
   for (let t = 1; t <= EXPLICIT_YEARS; t++) {
     pv += (oePerShare * Math.pow(1 + g, t)) / Math.pow(1 + r, t);
@@ -221,7 +225,7 @@ export async function computeIntrinsicValue(
   // --- Engine 1: owner-earnings DCF ------------------------------------------------------
   const g = growthBase ?? 0.03;
   const gBear = Math.max(g * 0.4, 0);
-  const gBull = Math.min(g * 1.3, 0.18);
+  const gBull = Math.min(g * 1.3, 0.25);
   const dcfBear = dcfPerShare(oePerShare, gBear, r);
   const dcfBase = dcfPerShare(oePerShare, g, r);
   const dcfBull = dcfPerShare(oePerShare, gBull, r);
@@ -254,6 +258,13 @@ export async function computeIntrinsicValue(
   lines.push(`Earnings-yield anchor: ${fmtMoney(oePerShare)}/sh ÷ ${fmtPct(r)} required return = ${fmtMoney(eyAnchor)}/sh`);
 
   // --- Triangulated band ------------------------------------------------------------------
+  // Honesty rule: a lone earnings-yield anchor is a point, not a band. If neither the DCF
+  // nor the EPV could run, there is no triangulation — return null ("cannot be valued")
+  // rather than presenting a single number as a range with false precision about uncertainty.
+  if (!dcf && !epv) {
+    warnings.push("Only the earnings-yield anchor was computable — no triangulated band; treating as insufficient data.");
+    return null;
+  }
   const lows: number[] = [];
   const highs: number[] = [];
   if (dcf) { lows.push(dcf.bear); highs.push(dcf.bull); }
