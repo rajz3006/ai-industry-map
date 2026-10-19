@@ -62,7 +62,11 @@ export default function MarketsTable({
       const fundTouch = fundRange ? entryTouchStatus(live?.low ?? live?.price, fundRange.priceLow, fundRange.priceHigh) : null;
       const techEntry = symbolRanges?.technical;
       const techRange = techEntry?.status === "ready" ? techEntry.range : null;
-      const techTouch = techRange ? entryTouchStatus(live?.low ?? live?.price, techRange.priceLow, techRange.priceHigh) : null;
+      // "Touched" compares against the raw Bollinger lower band, not the displayed range's
+      // priceHigh — priceHigh includes a cushion above the band that, for a low-volatility
+      // stock, regularly sits above the day's actual low, which was firing "touched" on
+      // almost every row regardless of whether price action ever neared real support.
+      const techTouch = techRange ? entryTouchStatus(live?.low ?? live?.price, techRange.priceLow, techRange.bollingerLower) : null;
       return {
         nodeId: r.nodeId,
         name: n?.name ?? r.nodeId,
@@ -138,12 +142,14 @@ export default function MarketsTable({
         case "fundEntry":
         case "techEntry": {
           // Deepest "below range" first, then "touched," then "above"/unknown — i.e. the
-          // most clearly-in-the-zone candidates sort to the top. Expressed as (priceHigh -
+          // most clearly-in-the-zone candidates sort to the top. Expressed as (ceiling -
           // dayLow): the bigger the gap below the ceiling, the stronger/deeper the touch.
-          const aRange = sort.key === "fundEntry" ? a.fundRange : a.techRange;
-          const bRange = sort.key === "fundEntry" ? b.fundRange : b.techRange;
-          av = aRange && typeof a.low === "number" ? aRange.priceHigh - a.low : -Infinity;
-          bv = bRange && typeof b.low === "number" ? bRange.priceHigh - b.low : -Infinity;
+          // The technical column's ceiling is the raw Bollinger lower band (matching
+          // techTouch above), not its displayed priceHigh — see the note by techTouch.
+          const aCeiling = sort.key === "fundEntry" ? a.fundRange?.priceHigh : a.techRange?.bollingerLower;
+          const bCeiling = sort.key === "fundEntry" ? b.fundRange?.priceHigh : b.techRange?.bollingerLower;
+          av = typeof aCeiling === "number" && typeof a.low === "number" ? aCeiling - a.low : -Infinity;
+          bv = typeof bCeiling === "number" && typeof b.low === "number" ? bCeiling - b.low : -Infinity;
           break;
         }
         case "asOf":

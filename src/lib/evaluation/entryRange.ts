@@ -31,6 +31,14 @@
 //      separate fetch). That implied per-share figure barely moves day to day, so the
 //      resulting price range stays valid as a reference all session even though it's
 //      computed once.
+//   5. Sanity-check the result against the current price (see MAX_ANCHOR_DIVERGENCE below):
+//      a cyclical business at a temporary trailing-earnings peak (e.g. a memory-chip maker
+//      mid-upcycle) can have an artificially LOW trailing P/E, which inflates the implied
+//      EPS this math backs out of it, and multiplying that inflated EPS by a "normal"
+//      multiple produces a price divorced from reality (observed in production: Micron's
+//      range came out ~$1,860-$2,280 against an actual price around $900). Rather than show
+//      a number implying a 50%+ move just to reach it, this returns unavailable instead — an
+//      honest "can't tell" beats a precise-looking but implausible figure.
 //
 // Cached 24h per symbol (module-level Map — see AGENTS.md on this app's in-memory cache
 // convention; there's no database, so this resets on a cold serverless start, same tradeoff
@@ -50,6 +58,18 @@ const QUALITY_ANCHOR_SWING = 0.3;
 const NEWS_ANCHOR_SWING = 0.15;
 // Half-width of the final price band around that anchor — the actual "entry range" span.
 const ENTRY_BAND_HALF_WIDTH = 0.1;
+// If the computed range sits more than this far (as a fraction) from the current price on
+// its nearest edge, treat the multiple-to-price conversion as unreliable rather than show it.
+const MAX_ANCHOR_DIVERGENCE = 0.5;
+
+/** True if `anchorPrice` is inside [low, high], or within MAX_ANCHOR_DIVERGENCE of whichever
+ * edge is closer — i.e. the range is still a plausible near-term reference, not a number
+ * that would require an implausible move to ever matter. */
+function withinPlausibleReach(anchorPrice: number, low: number, high: number): boolean {
+  if (anchorPrice >= low && anchorPrice <= high) return true;
+  const nearestEdge = anchorPrice < low ? low : high;
+  return Math.abs(nearestEdge - anchorPrice) / anchorPrice <= MAX_ANCHOR_DIVERGENCE;
+}
 
 export interface FundamentalRange {
   symbol: string;
@@ -110,14 +130,17 @@ export async function computeFundamentalRange(symbol: string, anchorPrice: numbe
     const fairLow = fairAnchor * (1 - ENTRY_BAND_HALF_WIDTH);
     const fairHigh = fairAnchor * (1 + ENTRY_BAND_HALF_WIDTH);
     if (fairLow <= 0 || fairHigh <= fairLow) return null;
+    const priceLow = fairLow * impliedPerShare;
+    const priceHigh = fairHigh * impliedPerShare;
+    if (!withinPlausibleReach(anchorPrice, priceLow, priceHigh)) return null;
     return {
       symbol: sym,
       metric,
       currentMultiple: multiple,
       fairMultipleLow: fairLow,
       fairMultipleHigh: fairHigh,
-      priceLow: fairLow * impliedPerShare,
-      priceHigh: fairHigh * impliedPerShare,
+      priceLow,
+      priceHigh,
       financialsScore,
       financialsVerdict,
       newsScore,
