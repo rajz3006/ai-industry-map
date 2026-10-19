@@ -6,6 +6,9 @@ import { allTickerRows } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
 import { useNowTick } from "@/hooks/useNowTick";
 import { useEntryRanges } from "@/hooks/useEntryRanges";
+import { EntryRangeCell } from "./EntryRangeCell";
+import type { FundamentalRange } from "@/lib/evaluation/entryRange";
+import type { TechnicalRange } from "@/lib/evaluation/technicalRange";
 import {
   changeDirection,
   formatChangePercent,
@@ -29,6 +32,37 @@ function entryTouchStatus(dayLow: number | undefined, priceLow: number, priceHig
 }
 
 const ALL_CATEGORIES = "All";
+
+/** Tooltip content for the fundamental cell: the full methodology breakdown. */
+function fundamentalTip(range: FundamentalRange, symbol: string) {
+  const b = range.breakdown;
+  const lines = [
+    `Entry band ${formatPrice(range.priceLow, symbol)}–${formatPrice(range.priceHigh, symbol)} — intrinsic value ${formatPrice(range.ivLow, symbol)}–${formatPrice(range.ivHigh, symbol)} after ${(range.marginOfSafety * 100).toFixed(0)}% margin of safety`,
+    ...b.lines,
+    ...range.mosReasons.map((r) => `Margin of safety: ${r}`),
+    `News read: ${range.newsScore.toFixed(1)}/5 (${range.newsVerdict}) — bad news widens the required discount`,
+  ];
+  return {
+    title: "Fundamental range — intrinsic value with margin of safety",
+    lines,
+    warnings: b.warnings,
+    footer: `Methodology v2 (owner-earnings DCF + Greenwald EPV + earnings-yield anchor; no peer comps) · computed ${formatTimestamp(range.computedAt)} · cached 24h · a reference point, not a recommendation`,
+  };
+}
+
+/** Tooltip content for the technical cell: the full methodology breakdown. */
+function technicalTip(range: TechnicalRange, symbol: string) {
+  const lines = [
+    `Accumulation zone ${formatPrice(range.priceLow, symbol)}–${formatPrice(range.priceHigh, symbol)} (center ${formatPrice(range.referenceLevel, symbol)})`,
+    ...range.lines,
+  ];
+  return {
+    title: "Technical range — institutional accumulation zone",
+    lines,
+    warnings: range.warnings,
+    footer: `Methodology v2 (volume profile + swing lows + anchored VWAP, money-flow adjusted, ATR-sized) · recomputed live every refresh · up/down volume is a price×volume proxy, not true order-flow data · a reference point, not a recommendation`,
+  };
+}
 
 export default function MarketsTable({
   quotes,
@@ -62,11 +96,12 @@ export default function MarketsTable({
       const fundTouch = fundRange ? entryTouchStatus(live?.low ?? live?.price, fundRange.priceLow, fundRange.priceHigh) : null;
       const techEntry = symbolRanges?.technical;
       const techRange = techEntry?.status === "ready" ? techEntry.range : null;
-      // "Touched" compares against the raw Bollinger lower band, not the displayed range's
-      // priceHigh — priceHigh includes a cushion above the band that, for a low-volatility
-      // stock, regularly sits above the day's actual low, which was firing "touched" on
-      // almost every row regardless of whether price action ever neared real support.
-      const techTouch = techRange ? entryTouchStatus(live?.low ?? live?.price, techRange.priceLow, techRange.bollingerLower) : null;
+      // "Touched" compares against the zone's confluence center (referenceLevel), not the
+      // displayed priceHigh — priceHigh includes the ATR cushion above the center that, for a
+      // low-volatility stock, regularly sits above the day's actual low, which would fire
+      // "touched" on almost every row regardless of whether price action ever neared the
+      // real accumulation zone.
+      const techTouch = techRange ? entryTouchStatus(live?.low ?? live?.price, techRange.priceLow, techRange.referenceLevel) : null;
       return {
         nodeId: r.nodeId,
         name: n?.name ?? r.nodeId,
@@ -146,8 +181,8 @@ export default function MarketsTable({
           // dayLow): the bigger the gap below the ceiling, the stronger/deeper the touch.
           // The technical column's ceiling is the raw Bollinger lower band (matching
           // techTouch above), not its displayed priceHigh — see the note by techTouch.
-          const aCeiling = sort.key === "fundEntry" ? a.fundRange?.priceHigh : a.techRange?.bollingerLower;
-          const bCeiling = sort.key === "fundEntry" ? b.fundRange?.priceHigh : b.techRange?.bollingerLower;
+          const aCeiling = sort.key === "fundEntry" ? a.fundRange?.priceHigh : a.techRange?.referenceLevel;
+          const bCeiling = sort.key === "fundEntry" ? b.fundRange?.priceHigh : b.techRange?.referenceLevel;
           av = typeof aCeiling === "number" && typeof a.low === "number" ? aCeiling - a.low : -Infinity;
           bv = typeof bCeiling === "number" && typeof b.low === "number" ? bCeiling - b.low : -Infinity;
           break;
@@ -190,12 +225,16 @@ export default function MarketsTable({
       </div>
       <p className="mk-entry-note">
         Two independent entry-range reads, kept separate on purpose so you can see whether they agree.{" "}
-        <b>Fundamental range</b> comes purely from each company&rsquo;s own numbers — financial-statement quality,
-        its valuation multiple, and recent news/market context. Recomputed once a day and cached, not live.{" "}
-        <b>Technical range</b> comes purely from its chart — the 20-day Bollinger lower band, adjusted by the
-        trend/RSI/volume read — recomputed live every refresh. Neither uses risk/reward sizing (that&rsquo;s the
-        Trade Desk&rsquo;s job). &ldquo;Touched&rdquo; means today&rsquo;s low reached at or below that range&rsquo;s
-        top — a reference point, not a recommendation.
+        <b>Fundamental range</b> is a Buffett-style intrinsic-value band — the business&rsquo;s own owner
+        earnings (DCF), its no-growth Earnings Power Value, and an earnings-yield anchor, triangulated
+        into a band and discounted by a margin of safety. No peer multiples anywhere. Recomputed once a
+        day and cached, not live.{" "}
+        <b>Technical range</b> is an institutional accumulation zone — volume-profile nodes, swing lows,
+        and anchored VWAP in confluence, shifted by the buyer-vs-seller money-flow read (Chaikin Money
+        Flow, up/down volume, OBV) and sized by ATR. Recomputed live every refresh. Hover any range for
+        the full methodology breakdown; the ✓/∼ seal tells you whether the inputs were verified or
+        estimated. Neither uses risk/reward sizing (that&rsquo;s the Trade Desk&rsquo;s job). &ldquo;Touched&rdquo;
+        means today&rsquo;s low reached the zone&rsquo;s center — a reference point, not a recommendation.
         {entryRangeData && entryRangeData.computedToday < entryRangeData.totalSymbols && (
           <span className="mk-entry-progress">
             {" "}
@@ -294,16 +333,15 @@ export default function MarketsTable({
                     {!r.isUS ? (
                       <span className="exch">N/A</span>
                     ) : r.fundRange ? (
-                      <span
-                        className={`mk-entry-cell ${r.fundTouch ?? ""}`}
-                        title={`vs. ${r.fundRange.metric} ${r.fundRange.currentMultiple.toFixed(1)}x`}
+                      <EntryRangeCell
+                        {...fundamentalTip(r.fundRange, r.symbol)}
+                        seal={r.fundRange.seal}
+                        touch={r.fundTouch}
                       >
                         {formatPrice(r.fundRange.priceLow, r.symbol)}–{formatPrice(r.fundRange.priceHigh, r.symbol)}
-                        {r.fundTouch === "touched" && <span className="mk-entry-badge">touched</span>}
-                        {r.fundTouch === "below" && <span className="mk-entry-badge below">below</span>}
-                      </span>
+                      </EntryRangeCell>
                     ) : r.fundUnavailable ? (
-                      <span className="exch">no data</span>
+                      <span className="exch" title="The business has no positive owner earnings to value — an honest 'cannot be valued on earnings' rather than a sales-multiple guess.">no data</span>
                     ) : (
                       <span className="exch">computing…</span>
                     )}
@@ -312,16 +350,15 @@ export default function MarketsTable({
                     {!r.isUS ? (
                       <span className="exch">N/A</span>
                     ) : r.techRange ? (
-                      <span
-                        className={`mk-entry-cell ${r.techTouch ?? ""}`}
-                        title={`Bollinger lower band ${formatPrice(r.techRange.bollingerLower, r.symbol)}`}
+                      <EntryRangeCell
+                        {...technicalTip(r.techRange, r.symbol)}
+                        seal={r.techRange.seal}
+                        touch={r.techTouch}
                       >
                         {formatPrice(r.techRange.priceLow, r.symbol)}–{formatPrice(r.techRange.priceHigh, r.symbol)}
-                        {r.techTouch === "touched" && <span className="mk-entry-badge">touched</span>}
-                        {r.techTouch === "below" && <span className="mk-entry-badge below">below</span>}
-                      </span>
+                      </EntryRangeCell>
                     ) : r.techUnavailable ? (
-                      <span className="exch">no data</span>
+                      <span className="exch" title="Not enough price history for a volume-profile read (needs 60+ sessions).">no data</span>
                     ) : (
                       <span className="exch">computing…</span>
                     )}

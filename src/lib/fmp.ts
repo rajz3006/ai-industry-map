@@ -127,6 +127,132 @@ export async function getAnnualCashFlow(symbol: string): Promise<FmpCashFlowRow 
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Risk-free rate (10-year Treasury) for intrinsic-value discount rates.
+// ---------------------------------------------------------------------------
+
+const TREASURY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h: one global fetch/day, negligible vs 250 req/day
+/** Labeled fallback when the treasury feed is unreachable — shown as "assumed" in tooltips,
+ * never presented as observed data. */
+export const FALLBACK_RISK_FREE_RATE = 0.045;
+
+export interface RiskFreeRate {
+  /** Decimal, e.g. 0.0509 for 5.09%. */
+  rate: number;
+  asOf: string | null;
+  /** "FMP treasury" when observed, "assumption" when the feed failed. */
+  source: "FMP treasury" | "assumption";
+}
+
+/** 10-year Treasury yield for Buffett-style discount rates (risk-free + ERP). Never throws:
+ * degrades to a labeled assumption so valuation math can still run, with the tooltip showing
+ * exactly which it was. */
+export async function getRiskFreeRate(): Promise<RiskFreeRate> {
+  const cacheKey = "fmp:risk-free-rate-10y";
+  const cached = cacheGet<RiskFreeRate>(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const fallback: RiskFreeRate = { rate: FALLBACK_RISK_FREE_RATE, asOf: null, source: "assumption" };
+  if (!getFmpKey()) {
+    cacheSet(cacheKey, fallback, TREASURY_CACHE_TTL_MS);
+    return fallback;
+  }
+  // FMP v3 /treasury returns an array of rows with year10-style fields (stable docs rename
+  // some to year10Yield etc. — pick() defends against that).
+  let row: RawRow | undefined;
+  try {
+    const rows = await fmpGet<RawRow[]>("/treasury", { limit: 1 });
+    row = Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined;
+  } catch {
+    row = undefined;
+  }
+  const pct = pick(row, ["year10", "year10Yield", "tenYear", "dgs10", "10year"]);
+  if (pct === null || pct <= 0 || pct > 25) {
+    cacheSet(cacheKey, fallback, TREASURY_CACHE_TTL_MS);
+    return fallback;
+  }
+  const observed: RiskFreeRate = {
+    rate: pct / 100,
+    asOf: pickStr(row, ["date"]),
+    source: "FMP treasury",
+  };
+  cacheSet(cacheKey, observed, TREASURY_CACHE_TTL_MS);
+  return observed;
+}
+
+// ---------------------------------------------------------------------------
+// Multi-year annual income history (growth CAGR + earnings normalization).
+// ---------------------------------------------------------------------------
+
+export interface AnnualIncomeRow {
+  date: string | null;
+  revenue: number | null;
+  netIncome: number | null;
+  ebit: number | null;
+  ebitda: number | null;
+  eps: number | null;
+  weightedAverageShsOut: number | null;
+  incomeBeforeTax: number | null;
+  incomeTaxExpense: number | null;
+}
+
+/** Up to `limit` annual income-statement rows, newest first. One cached fetch per symbol —
+ * the intrinsic-value engine uses it for the 5-year revenue CAGR (growth input) and for
+ * normalizing owner earnings across the cycle (cyclicals guard). Never throws. */
+export async function getAnnualIncomeHistory(symbol: string, limit = 5): Promise<AnnualIncomeRow[]> {
+  if (!getFmpKey()) return [];
+  const sym = symbol.toUpperCase();
+  const cacheKey = `fmp:income-history:${sym}:${limit}`;
+  const cached = cacheGet<AnnualIncomeRow[]>(cacheKey);
+  if (cached !== undefined) return cached;
+  let rows: RawRow[] = [];
+  try {
+    const data = await fmpGet<RawRow[]>(`/income-statement/${sym}`, { period: "annual", limit });
+    if (Array.isArray(data)) rows = data;
+  } catch {
+    rows = [];
+  }
+  const out: AnnualIncomeRow[] = rows.map((row) => ({
+    date: pickStr(row, ["date"]),
+    revenue: pick(row, ["revenue"]),
+    netIncome: pick(row, ["netIncome"]),
+    ebit: pick(row, ["operatingIncome", "ebit"]),
+    ebitda: pick(row, ["ebitda"]),
+    eps: pick(row, ["eps", "epsdiluted"]),
+    weightedAverageShsOut: pick(row, ["weightedAverageShsOut", "weightedAverageShsOutDil"]),
+    incomeBeforeTax: pick(row, ["incomeBeforeTax", "earningsBeforeTax"]),
+    incomeTaxExpense: pick(row, ["incomeTaxExpense", "taxExpense", "provisionForIncomeTaxes"]),
+  }));
+  cacheSet(cacheKey, out, CACHE_TTL_MS);
+  return out;
+}
+
+/** Net debt = total debt − cash & equivalents, from the latest annual balance sheet. Used to
+ * bridge enterprise value → equity value in the intrinsic-value engine. Never throws. */
+export async function getNetDebt(symbol: string): Promise<number | null> {
+  if (!getFmpKey()) return null;
+  const sym = symbol.toUpperCase();
+  const cacheKey = `fmp:net-debt:${sym}`;
+  const cached = cacheGet<number | null>(cacheKey);
+  if (cached !== undefined) return cached;
+  const row = await fetchFirstRow(`/balance-sheet-statement/${sym}`, { period: "annual", limit: 1 });
+  if (!row) {
+    cacheSet(cacheKey, null, CACHE_TTL_MS);
+    return null;
+  }
+  const totalDebt =
+    pick(row, ["totalDebt"]) ??
+    (() => {
+      const st = pick(row, ["shortTermDebt"]);
+      const lt = pick(row, ["longTermDebt"]);
+      return st != null || lt != null ? (st ?? 0) + (lt ?? 0) : null;
+    })();
+  const cash = pick(row, ["cashAndCashEquivalents", "cashAndShortTermInvestments"]);
+  const netDebt = totalDebt != null && cash != null ? totalDebt - cash : totalDebt;
+  cacheSet(cacheKey, netDebt, CACHE_TTL_MS);
+  return netDebt;
+}
+
 export interface FmpFundamentals {
   symbol: string;
   asOf: string; // ISO timestamp this snapshot was fetched/computed
