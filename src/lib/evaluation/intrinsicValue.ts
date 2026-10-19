@@ -37,6 +37,7 @@
 
 import { getFundamentals, getAnnualIncomeHistory, getAnnualCashFlow, getNetDebt } from "@/lib/fmp";
 import { getFinnhubFundamentals } from "./finnhubFundamentals";
+import { fetchCompanyProfile } from "@/lib/companyProfile";
 import type { RiskFreeRate } from "@/lib/fmp";
 
 // --- Assumptions, all surfaced in tooltips (nothing hidden) -----------------------------
@@ -109,12 +110,13 @@ export async function computeIntrinsicValue(
   const lines: string[] = [];
   const warnings: string[] = [];
 
-  const [fmp, finnhub, history, cashFlow, netDebt] = await Promise.all([
+  const [fmp, finnhub, history, cashFlow, netDebt, profile] = await Promise.all([
     getFundamentals(sym).catch(() => null),
     getFinnhubFundamentals(sym).catch(() => null),
     getAnnualIncomeHistory(sym, 5).catch(() => []),
     getAnnualCashFlow(sym).catch(() => null),
     getNetDebt(sym).catch(() => null),
+    fetchCompanyProfile(sym).catch(() => null),
   ]);
 
   const r = riskFree.rate + ERP;
@@ -139,8 +141,22 @@ export async function computeIntrinsicValue(
       }
     }
   }
-  // Finnhub fallback: EPS × shares
-  const sharesOut: number | null = history.find((h) => h.weightedAverageShsOut && h.weightedAverageShsOut > 0)?.weightedAverageShsOut ?? null;
+  // Shares outstanding: FMP's own annual filings first; when FMP isn't configured/available
+  // (this app has no FMP_API_KEY by default — see .env.example), fall back to Finnhub's
+  // company-profile market cap / anchor price, which is the only shares-outstanding source
+  // this app otherwise has. Without this fallback, the whole Finnhub-only "EPS × shares"
+  // path below is unreachable even when it says "fallback," because it still needs a shares
+  // count from somewhere — this was silently making the entire Fundamental range
+  // "unavailable" for every symbol whenever FMP_API_KEY was unset.
+  const fmpSharesOut = history.find((h) => h.weightedAverageShsOut && h.weightedAverageShsOut > 0)?.weightedAverageShsOut ?? null;
+  const profileSharesOut =
+    profile && profile.marketCapitalization > 0 && anchorPrice && anchorPrice > 0
+      ? (profile.marketCapitalization * 1_000_000) / anchorPrice
+      : null;
+  const sharesOut: number | null = fmpSharesOut ?? profileSharesOut;
+  if (!fmpSharesOut && profileSharesOut) {
+    warnings.push("Shares outstanding estimated from Finnhub market cap ÷ price — no FMP filing data.");
+  }
   if (oeTTM === null && finnhub?.peTTM && finnhub.peTTM > 0 && anchorPrice && anchorPrice > 0 && sharesOut) {
     const eps = anchorPrice / finnhub.peTTM;
     oeTTM = eps * sharesOut;
