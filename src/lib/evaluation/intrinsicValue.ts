@@ -47,6 +47,9 @@ const TERMINAL_GROWTH = 0.025; // perpetual growth after year 7 (long-run nomina
 const GROWTH_CAP = 0.2; // sustainable explicit-stage growth is capped — even the best
 // compounders fade; the bear scenario and the margin of safety carry the conservatism,
 // not an unrealistically low cap. Terminal growth stays at 2.5%.
+const SINGLE_YEAR_GROWTH_CAP = 0.12; // tighter cap for growth sourced from one TTM print
+// (no multi-year CAGR to confirm it's a trend, not a cyclical spike) — see the fallback
+// growth branch below.
 const GROWTH_FLOOR = 0.0; // never assume shrinkage in the base case; bear scenario handles it
 const CV_CYCLICAL_THRESHOLD = 0.6; // coeff. of variation above this => cyclical, normalize
 const MOS_BASE = 0.25; // base margin of safety applied by entryRange.ts (Graham's 20-30% convention)
@@ -187,11 +190,25 @@ export async function computeIntrinsicValue(
     }
   }
   if (growthBase === null) {
-    const g = finnhub?.revenueGrowthTTMYoy ?? fmp?.revenueGrowthYoy ?? null;
+    // Finnhub's /stock/metric returns this field as a percentage (14.24 meaning 14.24%),
+    // same convention as every other Finnhub fallback field in this app (see
+    // scoreFinancials.ts's netMargin/grossMargin/revenueGrowth/roe, which all divide by 100) —
+    // FMP's growth field is already a fraction, so only the Finnhub side needs the /100.
+    const g = finnhub?.revenueGrowthTTMYoy != null ? finnhub.revenueGrowthTTMYoy / 100 : fmp?.revenueGrowthYoy ?? null;
     if (g !== null && Number.isFinite(g)) {
-      growthBase = Math.min(Math.max(g, GROWTH_FLOOR), GROWTH_CAP);
-      lines.push(`Growth ${fmtPct(growthBase)} from TTM revenue growth (single-year, capped)`);
+      // The multi-year CAGR branch above already smooths out single-year noise before it
+      // ever reaches GROWTH_CAP; a lone TTM print has no such averaging, so a cyclical
+      // upswing (e.g. a memory-chip maker mid AI-demand spike) reads as a sustainable 20%+
+      // trend with nothing to tell the two apart. Capping single-year prints tighter is the
+      // cyclicals guard's intent (see file header) applied the only way it can run without
+      // FMP's multi-year history to actually detect cyclicality.
+      const cap = Math.min(GROWTH_CAP, SINGLE_YEAR_GROWTH_CAP);
+      growthBase = Math.min(Math.max(g, GROWTH_FLOOR), cap);
+      lines.push(`Growth ${fmtPct(growthBase)} from TTM revenue growth (single-year, capped at ${fmtPct(cap)})`);
       warnings.push("Multi-year history unavailable — growth from single TTM figure.");
+      if (g > cap) {
+        warnings.push(`Raw TTM growth ${fmtPct(g)} far exceeds a sustainable rate — likely a cyclical spike with no multi-year history to confirm the trend; capped at ${fmtPct(cap)} for the valuation.`);
+      }
     }
   }
 
