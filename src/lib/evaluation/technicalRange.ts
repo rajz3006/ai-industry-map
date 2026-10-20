@@ -65,6 +65,13 @@ const SWING_LOOKBACK = 90; // look for swing lows in the trailing 90 bars
 const OBV_TREND_DAYS = 60; // the longer-horizon money-flow vote (see header)
 const MONEY_FLOW_CAP = 0.12; // absolute max zone shift from the money-flow read
 const ATR_WIDTH_MULT = 0.75; // zone half-width = 0.75 × ATR(20)
+const MAX_PLAUSIBLE_ZONE_ATR = 4; // a cluster further than this from today's price is a
+// price regime the stock has left behind, not live support — see the plausibility override
+// in the confluence selection below (the "re-rated stock" case). Capped jointly with a
+// percentage-of-price bound (below) so a stock whose ATR is itself inflated by a huge prior
+// move (e.g. a name now trading at 10x where it spent most of the year) doesn't get an
+// implicitly wide-in-dollar-terms "plausible" window just because its ATR is also large.
+const MAX_PLAUSIBLE_ZONE_PCT = 0.25;
 
 export type MoneyFlowVerdict = "accumulation" | "distribution" | "neutral";
 
@@ -232,15 +239,44 @@ export function computeTechnicalRange(symbol: string, bars: Bar[], options?: Tec
   const atrEarly = atr(ref, 20);
   const clusterTol = atrEarly !== null && atrEarly > 0 ? atrEarly * 2 : lastClose * 0.1;
   const sorted = [...anchors].sort((a, b) => a.level - b.level);
-  let best: typeof anchors = [sorted[0]];
-  let bestWeight = sorted[0].weight;
+  const clusterAvg = (c: typeof anchors) => c.reduce((s, a) => s + a.level * a.weight, 0) / c.reduce((s, a) => s + a.weight, 0);
+  // A stock that re-rated hard within the 12-month profile window (e.g. a name mid an
+  // AI-demand cycle, up several-fold this year) leaves two disjoint clusters: a heavy one
+  // from the long consolidation BEFORE the move (volume node + POC, most of a year of
+  // trading), and a lighter one from AFTER it (a recent swing low). Picking by weight alone
+  // lets the stale, pre-move cluster win even though it sits many ATRs from today's price —
+  // the "Micron lesson" applied to the technical side. Among clusters within a plausible
+  // distance of today's price, the highest-weight one wins as before; only fall back to an
+  // implausibly distant cluster if nothing plausible exists at all.
+  const maxDist = Math.min(
+    atrEarly !== null && atrEarly > 0 ? atrEarly * MAX_PLAUSIBLE_ZONE_ATR : Infinity,
+    lastClose * MAX_PLAUSIBLE_ZONE_PCT
+  );
+  type Cluster = typeof anchors;
+  let bestOverall: Cluster = [sorted[0]];
+  let bestOverallWeight = sorted[0].weight;
+  let bestPlausible: Cluster | null = null;
+  let bestPlausibleWeight = -Infinity;
   for (let i = 0; i < sorted.length; i++) {
     for (let j = i; j < sorted.length; j++) {
       if (sorted[j].level - sorted[i].level > clusterTol) break;
       const cluster = sorted.slice(i, j + 1);
       const w = cluster.reduce((s, a) => s + a.weight, 0);
-      if (w > bestWeight) { best = cluster; bestWeight = w; }
+      if (w > bestOverallWeight) { bestOverall = cluster; bestOverallWeight = w; }
+      const dist = Math.abs(clusterAvg(cluster) - lastClose);
+      if (dist <= maxDist && w > bestPlausibleWeight) { bestPlausible = cluster; bestPlausibleWeight = w; }
     }
+  }
+  const best = bestPlausible ?? bestOverall;
+  if (bestPlausible && bestPlausible !== bestOverall) {
+    const staleDist = Math.abs(clusterAvg(bestOverall) - lastClose);
+    if (staleDist > maxDist) {
+      warnings.push(
+        `${bestOverall.map((a) => a.label).join("+")} ${fmtMoney(clusterAvg(bestOverall))} has more combined weight but sits far from today's price — likely a price regime this stock has left behind (a prior re-rating); using the nearer ${bestPlausible.map((a) => a.label).join("+")} cluster instead.`
+      );
+    }
+  } else if (!bestPlausible) {
+    warnings.push("No structure anchor sits within a plausible distance of today's price — the zone below reflects the least-implausible available read.");
   }
   const dropped = anchors.filter((a) => !best.includes(a));
   for (const d of dropped) {
@@ -328,9 +364,12 @@ export function computeTechnicalRange(symbol: string, bars: Bar[], options?: Tec
   if (!(priceLow > 0 && priceHigh >= priceLow)) return null;
 
   // Verified means the inputs actually support the claim: a near-full-year profile, at
-  // least two independent structure anchors in confluence, and all three money-flow reads.
+  // least two independent structure anchors in confluence, all three money-flow reads, and
+  // (critically) a plausible anchor near today's price — a thoroughly-agreed-upon cluster
+  // that's still many ATRs from the market (see bestPlausible above) is not "verified"
+  // structure just because it's internally consistent with itself.
   const seal: TechnicalRange["seal"] =
-    cluster.length >= 2 && votes === 3 && profileBars >= FULL_PROFILE_BARS ? "verified" : "estimated";
+    bestPlausible !== null && cluster.length >= 2 && votes === 3 && profileBars >= FULL_PROFILE_BARS ? "verified" : "estimated";
   if (seal === "estimated") {
     if (profileBars < FULL_PROFILE_BARS) {
       warnings.push(`Volume profile covers ${profileBars} sessions (< ${FULL_PROFILE_BARS}) — shorter than a full year, so the zone is estimated.`);
