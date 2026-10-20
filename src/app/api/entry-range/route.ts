@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { allTickerRows } from "@/data/tickers";
-import { loadBarSet } from "@/lib/moversData";
+import { loadLongBarSet, isLastBarForming } from "@/lib/moversData";
+import { alpacaDataFeed } from "@/lib/alpaca";
 import { mapWithConcurrency } from "@/lib/finnhub";
 import { computeFundamentalRange, getCachedFundamentalRange, type FundamentalRange } from "@/lib/evaluation/entryRange";
 import { computeTechnicalRange, type TechnicalRange } from "@/lib/evaluation/technicalRange";
@@ -17,9 +18,12 @@ import { computeTechnicalRange, type TechnicalRange } from "@/lib/evaluation/tec
 // tomorrow — the one caveat being that this is an in-memory cache, not a database, so a
 // Vercel cold start resets it (same tradeoff every other cache in this app already accepts).
 //
-// Technical range: pure arithmetic over the same daily bars already loaded for the
-// fundamental side (see technicalRange.ts) — no external calls, no rate limit to manage, so
-// it's computed for every symbol on every request instead of batched/cached.
+// Technical range: pure arithmetic over daily bars — no external calls, no rate limit to
+// manage, so it's computed for every symbol on every request instead of batched/cached.
+// Bars come from the LONG bar set (~13 months): the volume profile promises a trailing
+// 252 sessions, which the 190-day movers set cannot supply. The forming-bar decision is
+// made here (session-aware — a completed session is never dropped) and passed in, and so
+// is the Alpaca feed, so volume-derived output can disclose its source.
 export const maxDuration = 60;
 
 const BATCH_SIZE_PER_REQUEST = 12;
@@ -45,14 +49,18 @@ export interface EntryRangeResponse {
 
 export async function GET() {
   try {
-    const { bySymbol } = await loadBarSet();
+    const { bySymbol } = await loadLongBarSet();
+    const feed = alpacaDataFeed();
     const symbols = Array.from(new Set(allTickerRows.filter((t) => t.isUS).map((t) => t.symbol)));
 
     const entries: Record<string, SymbolRanges> = {};
     const pendingFundamentals: string[] = [];
     for (const sym of symbols) {
       const bars = bySymbol.get(sym) ?? [];
-      const technicalRange = computeTechnicalRange(sym, bars);
+      const technicalRange = computeTechnicalRange(sym, bars, {
+        dropFormingBar: isLastBarForming(bars),
+        feed,
+      });
       entries[sym] = { technical: technicalRange ? { status: "ready", range: technicalRange } : { status: "unavailable" } };
 
       const cached = getCachedFundamentalRange(sym);

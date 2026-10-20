@@ -19,8 +19,17 @@ export interface CategoryTrend {
 }
 
 export const LOOKBACK_DAYS = 190; // ~6 months plus buffer for period-start comparisons
+export const LOOKBACK_DAYS_LONG = 400; // ~13 months — enough for a genuine 252-session
+// volume profile (the entry-range route's technical range is built on this set; the movers
+// set above stays at 190 days because that's all the movers views need).
 const CACHE_TTL_MS = 15 * 60_000;
 export const NY_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" });
+const NY_TIME_FMT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  hour: "numeric",
+  minute: "numeric",
+  hour12: false,
+});
 
 export interface MoverRow {
   symbol: string;
@@ -36,13 +45,12 @@ export interface BarSet {
 }
 
 let cache: { data: BarSet; fetchedAt: number } | null = null;
+let longCache: { data: BarSet; fetchedAt: number } | null = null;
 
-export async function loadBarSet(): Promise<BarSet> {
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) return cache.data;
-
+async function fetchBarSet(lookbackDays: number): Promise<BarSet> {
   const symbols = Array.from(new Set(allTickerRows.filter((r) => r.isUS).map((r) => r.symbol)));
   const now = Date.now();
-  const start = new Date(now - LOOKBACK_DAYS * 24 * 3600_000).toISOString();
+  const start = new Date(now - lookbackDays * 24 * 3600_000).toISOString();
   const end = new Date(now).toISOString();
 
   const raw = await alpacaGetMultiBars(symbols, {
@@ -62,9 +70,43 @@ export async function loadBarSet(): Promise<BarSet> {
   }
   const dates = Array.from(dateSet).sort();
 
-  const data: BarSet = { bySymbol, dates };
+  return { bySymbol, dates };
+}
+
+export async function loadBarSet(): Promise<BarSet> {
+  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) return cache.data;
+  const data = await fetchBarSet(LOOKBACK_DAYS);
   cache = { data, fetchedAt: Date.now() };
   return data;
+}
+
+/** The long-window set (~13 months) backing the entry-range route, whose volume profile
+ * promises a trailing 12 months / 252 sessions — the 190-day movers set silently starved
+ * that to ~130 sessions. Separate cache so neither consumer perturbs the other. */
+export async function loadLongBarSet(): Promise<BarSet> {
+  if (longCache && Date.now() - longCache.fetchedAt < CACHE_TTL_MS) return longCache.data;
+  const data = await fetchBarSet(LOOKBACK_DAYS_LONG);
+  longCache = { data, fetchedAt: Date.now() };
+  return data;
+}
+
+/**
+ * Is the last bar in this series today's still-forming US session? True only when the last
+ * bar's NY date is today AND it's before the 16:00 ET close. After the close — and on
+ * weekends/holidays, when the last bar is a completed prior session — returns false, so
+ * consumers that build "prior benchmark" levels from completed bars only (the technical
+ * entry range) don't throw away a finished session and lag a day behind every evening.
+ * (Early-close days: the bar completes at 13:00 ET but reads as forming until 16:00 —
+ * conservative and harmless.)
+ */
+export function isLastBarForming(bars: AlpacaBar[], now: Date = new Date()): boolean {
+  if (bars.length === 0) return false;
+  const last = bars[bars.length - 1];
+  if (NY_DATE_FMT.format(new Date(last.t)) !== NY_DATE_FMT.format(now)) return false;
+  const parts = NY_TIME_FMT.formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return hour * 60 + minute < 16 * 60;
 }
 
 /** Resolves a requested date to the nearest available trading session at or before it. */

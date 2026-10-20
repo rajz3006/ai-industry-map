@@ -11,6 +11,23 @@ export function getAlpacaCreds(): { key: string; secret: string } | null {
   return { key, secret };
 }
 
+/** Which Alpaca data feed bars come from. "iex" (the free-plan feed — a single exchange,
+ * roughly 2–3% of consolidated tape volume) is the default; set ALPACA_DATA_FEED=sip on a
+ * plan that includes the consolidated tape to get full-market volume. Anything that READS
+ * volume (volume profiles, money flow) must disclose which feed produced it — see
+ * alpacaFeedDisclosure(). */
+export function alpacaDataFeed(): "iex" | "sip" {
+  return process.env.ALPACA_DATA_FEED?.trim().toLowerCase() === "sip" ? "sip" : "iex";
+}
+
+/** Plain-language disclosure of what the active feed's volume figures do and don't cover,
+ * for surfacing wherever volume-derived numbers are shown. */
+export function alpacaFeedDisclosure(feed: "iex" | "sip"): string {
+  return feed === "sip"
+    ? "Volume source: SIP consolidated tape (all US exchanges)."
+    : "Volume source: IEX exchange feed only (~2–3% of consolidated tape) — volume-derived levels are indicative, not full-market.";
+}
+
 export class AlpacaError extends Error {
   status?: number;
   constructor(message: string, status?: number) {
@@ -44,7 +61,7 @@ export async function alpacaGetMultiBars(
   const qs = new URLSearchParams({
     ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
     symbols: symbols.join(","),
-    feed: "iex",
+    feed: alpacaDataFeed(),
   });
   const bySymbol: Record<string, AlpacaBar[]> = {};
   let pageToken: string | undefined;
@@ -77,7 +94,7 @@ export async function alpacaGetBars(
   }
   const qs = new URLSearchParams({
     ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
-    feed: "iex",
+    feed: alpacaDataFeed(),
   });
   const bars: AlpacaBar[] = [];
   let pageToken: string | undefined;

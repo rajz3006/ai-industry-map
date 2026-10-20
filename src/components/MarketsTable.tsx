@@ -60,7 +60,7 @@ function technicalTip(range: TechnicalRange, symbol: string) {
     title: "Technical range — institutional accumulation zone",
     lines,
     warnings: range.warnings,
-    footer: `Methodology v2 (volume profile + swing lows + anchored VWAP, money-flow adjusted, ATR-sized) · recomputed live every refresh · up/down volume is a price×volume proxy, not true order-flow data · a reference point, not a recommendation`,
+    footer: `Methodology v3 (range-distributed volume profile + swing lows + anchored VWAP, money-flow adjusted, ATR-sized) · recomputed live every refresh · up/down volume is a price×volume proxy, not true order-flow data · a reference point, not a recommendation`,
   };
 }
 
