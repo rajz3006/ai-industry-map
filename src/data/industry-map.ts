@@ -531,10 +531,10 @@ export const nodes: MapNode[] = [
   {
     "id": "groq",
     "name": "Groq",
-    "layer": "Software & silicon",
-    "sub": "LPU · Nvidia-licensed",
+    "layer": "Cloud & compute",
+    "sub": "GroqCloud · LPU neocloud",
     "desc": "Inference-chip maker whose low-latency LPU architecture now underlies Nvidia's fastest inference racks, while GroqCloud continues operating as a nominally independent business.",
-    "fact": "Nvidia agreed to a $20B non-exclusive licensing-and-acquihire deal in December 2025 — its largest transaction on record; Groq 3 LPU racks reached full production in August 2026.",
+    "fact": "Nvidia's Dec 24, 2025 non-exclusive LPU license-and-acquihire (~$20B reported; $17B license + ~$3B in staff awards) moved Groq's chip team — incl. founder Jonathan Ross — to Nvidia, where Groq 3 LPU racks reached production in Aug 2026; the remaining Groq, led by CEO Simon Edwards, operates GroqCloud as an independent neocloud at a ~$3.5B valuation, while the deal faces a DOJ inquiry and an Oct 2026 Delaware suit alleging it was a sale requiring a stockholder vote.",
     "src": "groq"
   },
   {
@@ -615,7 +615,7 @@ export const nodes: MapNode[] = [
     "layer": "Cloud & compute",
     "sub": "Data + AI platform",
     "desc": "Enterprise data and AI platform whose valuation has climbed alongside hyperscaler-scale funding rounds from sovereign and venture investors.",
-    "fact": "Raised $10B in 2024 at a $62B valuation, backed in part by Abu Dhabi's MGX; ranked the fourth most highly valued U.S. startup behind OpenAI, SpaceX and Stripe.",
+    "fact": "Closed a $5B strategic round at a $190B valuation in August 2026 (Coatue-led; Blackstone and MGX among participants) after crossing a $7B revenue run-rate growing >80% y/y; no S-1 filed as of Oct 2026, with the CEO publicly pointing to 2027 or later.",
     "src": "mgx"
   },
   {
@@ -1022,6 +1022,258 @@ export const nodes: MapNode[] = [
     "desc": "Alternative asset manager on the equity side of AI infrastructure — the owner, not the lender: it holds the majority equity in Meta's Hyperion data-center JV and was an early Crusoe backer.",
     "fact": "Blue Owl owns 80% of the Meta Hyperion JV (~$27–29B phase-1 development, scaling toward 5 GW / >$50B per Meta); the JV's $27.3B debt package was led by PIMCO — the map previously had the lender, not the owner.",
     "src": "blueowlAI"
+  },
+  {
+    "id": "teconnectivity",
+    "name": "TE Connectivity",
+    "layer": "Fabrication & links",
+    "sub": "TEL · connectors & interconnect",
+    "desc": "Connector and sensor major that is Amphenol's direct peer in AI datacom, supplying the high-speed interconnect inside AI server racks.",
+    "fact": "AI/cloud revenue is on track to exceed its $3B target ahead of schedule (~17% of $17.3B FY2025 sales; $19.3B TTM); Digital Data Networks grew 34% y/y in Q3 FY2026 and AI datacom orders are up ~70% YTD.",
+    "src": "teconnectivityAI"
+  },
+  {
+    "id": "sanmina",
+    "name": "Sanmina",
+    "layer": "Systems & sites",
+    "sub": "SANM · contract builder / EMS",
+    "desc": "Contract manufacturer whose October 2025 acquisition of ZT Systems made it a third North American rack-scale builder for hyperscalers, alongside Celestica and Jabil.",
+    "fact": "ZT Systems is guided to contribute $5–6B of FY2026 revenue within $13.7–14.3B total (~40% — AI rack-scale manufacturing for hyperscalers and the AMD/OpenAI ecosystem); its Cloud & AI segment grew ~280% y/y in Q2 FY2026.",
+    "src": "sanminaAI"
+  },
+  {
+    "id": "gigabyte",
+    "name": "Gigabyte",
+    "layer": "Systems & sites",
+    "sub": "2376.TW · AI server OEM",
+    "desc": "Taiwanese server and motherboard maker whose AI-server business now exceeds several tracked OEMs in scale.",
+    "fact": "Servers are 71.5% of sales and ~90% of those are AI servers; FY2025 revenue was ~$10.5B and Q1 2026 AI-server sales grew 110% y/y.",
+    "src": "gigabyteAI"
+  },
+  {
+    "id": "shinetsu",
+    "name": "Shin-Etsu Chemical",
+    "layer": "Fabrication & links",
+    "sub": "4063.T · silicon wafers & materials",
+    "desc": "World's largest silicon-wafer maker (>30% share) and a leading supplier of photoresist and mask blanks — the materials layer's largest omission after Entegris and Ibiden.",
+    "fact": "Total revenue is ~$17.1B; Electronics Materials (~¥1,016B, ~$6.6B) alone exceeds TTM Technologies' total revenue, at 39% of sales and 52% of operating income, growing on strong AI demand for 300mm wafers.",
+    "src": "shinetsuAI"
+  },
+  {
+    "id": "unimicron",
+    "name": "Unimicron",
+    "layer": "Fabrication & links",
+    "sub": "3037.TW · ABF package substrates",
+    "desc": "Taiwanese substrate maker and the #2 ABF supplier (~20% of global capacity) — one of only two sources for the most advanced AI-accelerator substrates, alongside Ibiden.",
+    "fact": "FY2025 revenue was $4.21B ($4.8B TTM); ABF substrates reached 52% of Q2 2026 revenue, backed by NT$34B of 2026 capex aimed largely at ABF capacity.",
+    "src": "unimicronAI"
+  },
+  {
+    "id": "siemensenergy",
+    "name": "Siemens Energy",
+    "layer": "Power & utilities",
+    "sub": "ENR.DE · grid technology & turbines",
+    "desc": "German energy major spanning grid technology and gas turbines — a GE Vernova-scale peer whose data-center order book has become a direct read on the AI power buildout.",
+    "fact": "It booked ~€2B of data-center orders in H1 FY2026 alone (nearly all of FY2025's total), hyperscaler revenue above €2B in Q1 FY2026 doubled y/y, and 5 GW of data-center orders landed in Q2; Grid Technologies growth is guided at +25–27%.",
+    "src": "siemensenergyAI"
+  },
+  {
+    "id": "deltaelectronics",
+    "name": "Delta Electronics",
+    "layer": "Systems & sites",
+    "sub": "2308.TW · DC power & liquid cooling",
+    "desc": "Taiwanese power and thermal giant — Nvidia's 800VDC rack-power and CDU partner — supplying server power and liquid cooling at a scale exceeding several tracked names.",
+    "fact": "2025 revenue was ~$17.9B (+32% y/y); AI server power is >20% of revenue (>$3.6B) and AI liquid cooling ~9% (~$1.6B), a combined AI/data-center share of ~29%.",
+    "src": "deltaAI"
+  },
+  {
+    "id": "trane",
+    "name": "Trane Technologies",
+    "layer": "Systems & sites",
+    "sub": "TT · data-center cooling",
+    "desc": "HVAC major whose chillers have become core AI-hall infrastructure; it has been buying into liquid cooling (LiquidStack, Stellar Energy).",
+    "fact": "Total revenue is $21.3B; data centers are an estimated ~10% of sales (~$2.1B), with DC cooling revenue up 120% on a three-year stack and a record $12.1B backlog driven mainly by DC chillers.",
+    "src": "traneAI"
+  },
+  {
+    "id": "johnsoncontrols",
+    "name": "Johnson Controls",
+    "layer": "Systems & sites",
+    "sub": "JCI · DC cooling & building systems",
+    "desc": "Building-systems major whose data-center cooling and controls business now runs at a high-teens share of a ~$25B revenue base.",
+    "fact": "Data-center-related revenue is ~$4B+ and growing faster than the portfolio; its CDU pipeline exceeds $1B, with backlog of $21B (+32%) and orders +27% in FY Q3 2026.",
+    "src": "johnsoncontrolsAI"
+  },
+  {
+    "id": "cummins",
+    "name": "Cummins",
+    "layer": "Power & utilities",
+    "sub": "CMI · prime & backup power",
+    "desc": "Engine and power-generation major whose gensets are standard backup — and increasingly prime — power for data-center campuses.",
+    "fact": "Data-center-related revenue reached $3.5B in 2025 (from $2.6B in 2024, +35%) within $33.7B total; Power Systems revenue was $7.5B (+16%) with orders booked into 2028.",
+    "src": "cumminsAI"
+  },
+  {
+    "id": "caterpillar",
+    "name": "Caterpillar",
+    "layer": "Power & utilities",
+    "sub": "CAT · power generation",
+    "desc": "Heavy-machinery giant whose Power & Energy segment sells the gensets and turbines data centers are buying for prime power as grid queues lengthen.",
+    "fact": "Power & Energy is $28.6B of $67.6B sales; power-generation sales rose 44% in Q4 2025 on data-center genset and turbine demand, and a sixth 1 GW prime-power data-center deal has been signed.",
+    "src": "caterpillarAI"
+  },
+  {
+    "id": "comfortsystems",
+    "name": "Comfort Systems USA",
+    "layer": "Systems & sites",
+    "sub": "FIX · DC construction & integration (EPC)",
+    "desc": "Mechanical and electrical contractor that physically builds data centers — an anchor of the map's new construction/EPC category, where the binding constraint is skilled labor and speed-to-power.",
+    "fact": "Data centers are 45% of revenue (~$4.1B of $9.1B), with backlog of ~$11.9B.",
+    "src": "comfortsystemsAI"
+  },
+  {
+    "id": "emcor",
+    "name": "EMCOR",
+    "layer": "Systems & sites",
+    "sub": "EME · DC construction & integration (EPC)",
+    "desc": "Electrical and mechanical construction giant whose data-center electrical work is booked at multi-billion scale inside a single segment.",
+    "fact": "It books $2.46B of data-center electrical work in one segment alone, ~85% of that backlog DC-related, with total remaining performance obligations of $13.25B.",
+    "src": "emcorAI"
+  },
+  {
+    "id": "quantaservices",
+    "name": "Quanta Services",
+    "layer": "Systems & sites",
+    "sub": "PWR · DC construction & integration (EPC)",
+    "desc": "Infrastructure-services major for electric power whose Technology & Load Centers business wires up AI campuses and grid interconnections.",
+    "fact": "Technology & Load Centers is a ~$2.9B business guided to grow +220–240% in 2026; total backlog is a record $53.4B.",
+    "src": "quantaservicesAI"
+  },
+  {
+    "id": "cameco",
+    "name": "Cameco",
+    "layer": "Power & utilities",
+    "sub": "CCJ · uranium & nuclear fuel",
+    "desc": "World's largest public uranium producer (~15% of global output) and 49% owner of Westinghouse — the fuel-chain name the coverage sweep ruled into the Energy layer.",
+    "fact": "2025 revenue was C$3.48B with ~230M lbs contracted; via Westinghouse it is party to the October 2025 US-government $80B AP1000 partnership framed as power for data centers and AI.",
+    "src": "camecoAI"
+  },
+  {
+    "id": "brookfield",
+    "name": "Brookfield",
+    "layer": "Cloud & compute",
+    "sub": "BN · infrastructure sponsor",
+    "desc": "Canadian alternative-asset giant running a $100B AI Infrastructure Program — the largest financing omission the sweep found; its asset-management affiliate trades separately as BAM.",
+    "fact": "The program (Nov 2025) is anchored by a $10B-equity fund (BAIIF; $5B committed, incl. Nvidia and the Kuwait Investment Authority), spans Data4's 30+ AI-ready data centers and ~$30B initial France/Sweden tranches, and its Bloom Energy partnership expanded from $5B to $25B; with Cameco it co-owns Westinghouse.",
+    "src": "brookfieldAI"
+  },
+  {
+    "id": "blackrock",
+    "name": "BlackRock",
+    "layer": "Cloud & compute",
+    "sub": "BLK · infrastructure sponsor (GIP)",
+    "desc": "Asset-management giant whose Global Infrastructure Partners arm co-founded the AI Infrastructure Partnership and manages its data-center portfolio.",
+    "fact": "Through GIP it co-founded the AI Infrastructure Partnership (with MGX, Microsoft and Nvidia; targeting $30B equity / up to $100B incl. debt), whose first deal was the Oct 15, 2025 acquisition of Aligned Data Centers at ~$40B enterprise value — the largest data-center deal ever, 50 campuses, >5 GW.",
+    "src": "blackrockAI"
+  },
+  {
+    "id": "kkr",
+    "name": "KKR",
+    "layer": "Cloud & compute",
+    "sub": "KKR · infrastructure sponsor",
+    "desc": "Private-equity major with dedicated, specific data-center equity — co-owner of CyrusOne and partner in a $50B AI-infrastructure venture with ECP.",
+    "fact": "Co-owns CyrusOne ($15B 2022 take-private, 60+ data centers, >1 GW) with GIP; runs a $50B ECP strategic partnership for AI infrastructure (first project ~$4B, a 190 MW Texas campus) and the reported >$10B Helix AI-infrastructure venture.",
+    "src": "kkrAI"
+  },
+  {
+    "id": "ironmountain",
+    "name": "Iron Mountain",
+    "layer": "Systems & sites",
+    "sub": "IRM · data-center operator",
+    "desc": "Records-storage giant whose Global Data Center segment has become a hyperscale landlord in its own right, energizing ~400 MW over 24 months toward 1.4 GW.",
+    "fact": "FY2025 total revenue was $6.90B; the data-center segment is guided to exceed $1B in 2026 at >25% growth (Q1 2026: $255M, +47% y/y), on named hyperscale AI demand.",
+    "src": "ironmountainAI"
+  },
+  {
+    "id": "gds",
+    "name": "GDS Holdings",
+    "layer": "Systems & sites",
+    "sub": "GDS · China data-center operator",
+    "desc": "Pure-play Chinese data-center operator and the country's wholesale colocation leader, with record AI-driven bookings.",
+    "fact": "FY2026 guidance was raised to RMB12.7–13.0B (~$1.9B); H1 2026 bookings hit a record 471 MW with 757 MW of backlog, with management attributing demand mainly to AI.",
+    "src": "gdsAI"
+  },
+  {
+    "id": "vnet",
+    "name": "21Vianet (VNET Group)",
+    "layer": "Systems & sites",
+    "sub": "VNET · China data-center operator",
+    "desc": "Pure-play Chinese data-center operator, peer to GDS, whose wholesale IDC business is now its largest segment on AI demand.",
+    "fact": "FY2026 guidance is RMB11.5–11.8B (~$1.65B, +16–19%); wholesale IDC grew 29.3% y/y in Q2 2026 with 862 MW of wholesale orders won year-to-date.",
+    "src": "vnetAI"
+  },
+  {
+    "id": "galaxydigital",
+    "name": "Galaxy Digital",
+    "layer": "Systems & sites",
+    "sub": "GLXY · neocloud hosting",
+    "desc": "Crypto financial group whose Helios campus has flipped into one of the largest single-tenant AI hosting sites, fully leased to CoreWeave.",
+    "fact": "Helios Phase I (133 MW) was delivered to CoreWeave in Q2 2026 with rent commenced (~$80M/quarter run-rate, >90% project EBITDA margin); CoreWeave is committed to the full 526 MW on 15-year leases, expected at >$1.2B average annual revenue (~$18B+ over term), with Phases II–III delivering from Q2 2027.",
+    "src": "galaxydigitalAI"
+  },
+  {
+    "id": "terawulf",
+    "name": "TeraWulf",
+    "layer": "Systems & sites",
+    "sub": "WULF · neocloud hosting",
+    "desc": "Former bitcoin miner whose revenue mix has flipped to HPC leasing, anchored by a direct 20-year Anthropic lease.",
+    "fact": "HPC leasing was 71% of Q2 2026 revenue; ~839 MW is contracted, incl. the 401 MW Anthropic lease (~$19B, ~$950M/yr, delivering H2 2027) on top of a ~$12.8B Fluidstack/Core42 book — though delivered revenue is still only ~$170–180M annualized against ~$5.7B of debt.",
+    "src": "terawulfAI"
+  },
+  {
+    "id": "hut8",
+    "name": "Hut 8",
+    "layer": "Systems & sites",
+    "sub": "HUT · neocloud hosting",
+    "desc": "Energy-and-compute developer with one of the largest contracted AI data-center pipelines in the miner-pivot group, though delivered AI revenue is still negligible.",
+    "fact": "949 MW of AI data-center capacity is contracted (~$26.6B expected base-term value) with 1,330 MW under construction (Fluidstack/Anthropic/Google-backed); Q2 2026 Digital Infrastructure revenue was $1.3M.",
+    "src": "hut8AI"
+  },
+  {
+    "id": "generac",
+    "name": "Generac",
+    "layer": "Power & utilities",
+    "sub": "GNRC · backup generation",
+    "desc": "Generator maker whose September 2026 Amazon deal converted a small data-center business into contracted TTMI-scale backlog.",
+    "fact": "2026 data-center revenue is guided at only ~$450M, but the Amazon deal (Sep 2026) is worth up to $8B with $2.4B of initial 2027–28 deliveries (~$1.2B/yr, ~28% of 2025 revenue), alongside a $1.6B DC backlog.",
+    "src": "generacAI"
+  },
+  {
+    "id": "lasertec",
+    "name": "Lasertec",
+    "layer": "Fabrication & links",
+    "sub": "6920.T · EUV mask inspection",
+    "desc": "Japanese equipment maker holding a near-monopoly in EUV mask inspection — a chokepoint every sub-5nm AI chip depends on, with no rival above 10% share.",
+    "fact": "It holds 82.6% share of EUV mask inspection; orders rose 125.7% in FY2026 with backlog of ¥323B. Revenue (~$1.5B) is sub-TTMI — it clears on monopoly criticality.",
+    "src": "lasertecAI"
+  },
+  {
+    "id": "disco",
+    "name": "Disco",
+    "layer": "Fabrication & links",
+    "sub": "6146.T · dicing & grinding equipment",
+    "desc": "Japanese precision-equipment maker with ~70–75% global share in dicing and grinding — the wafer-thinning step HBM and AI logic increasingly require.",
+    "fact": "Record Q2 FY2027 sales rose 36.4% y/y, explicitly on generative-AI logic and HBM wafer-thinning demand; revenue is ~$2.8B.",
+    "src": "discoAI"
+  },
+  {
+    "id": "aaoi",
+    "name": "Applied Optoelectronics",
+    "layer": "Fabrication & links",
+    "sub": "AAOI · optical transceivers",
+    "desc": "US maker of optical transceivers for AI data centers — a domestic source in a China-led market, qualified as a 1.6T supplier at a major hyperscaler; its legacy CATV business is the non-AI remainder.",
+    "fact": "Q2 2026 revenue hit a record $191.9M (+86% y/y) with data-center revenue of $107.7M (+140% y/y); 800G revenue grew >10× y/y on $124M+ of cumulative orders, plus a $200M+ 1.6T order from a long-term hyperscale customer; the FY2026 outlook exceeds $1.1B, with demand forecast to exceed supply through mid-2027.",
+    "src": "aaoiAI"
   }
 ];
 
@@ -2209,6 +2461,150 @@ export const edges: MapEdge[] = [
     "label": "Early financial backer",
     "cite": "DataCenterDynamics · 2025",
     "id": "e147"
+  },
+  {
+    "from": "terawulf",
+    "to": "anthropic",
+    "type": "supply",
+    "label": "401 MW, 20-year HPC lease (~$19B, ~$950M/yr; delivery H2 2027)",
+    "cite": "Company filings · Oct 15, 2026",
+    "id": "e148"
+  },
+  {
+    "from": "terawulf",
+    "to": "g42",
+    "type": "supply",
+    "label": "HPC capacity for Core42 (G42's US arm) within a ~$12.8B Fluidstack/Core42 contracted book",
+    "cite": "Company filings · Oct 15, 2026",
+    "id": "e149"
+  },
+  {
+    "from": "galaxydigital",
+    "to": "coreweave",
+    "type": "supply",
+    "label": "Helios campus: 526 MW on 15-year leases (>$1.2B/yr average contracted revenue)",
+    "cite": "Company 8-K · Aug 5, 2026",
+    "id": "e150"
+  },
+  {
+    "from": "generac",
+    "to": "aws",
+    "type": "supply",
+    "label": "Backup-generation deal worth up to $8B; $2.4B of initial deliveries in 2027–28",
+    "cite": "Company announcement · Sep 2026",
+    "id": "e151"
+  },
+  {
+    "from": "sanmina",
+    "to": "amd",
+    "type": "supply",
+    "label": "Rack-scale AI manufacturing via ZT Systems ($5–6B guided FY2026 revenue)",
+    "cite": "Sanmina Q2 FY2026 results · Apr 2026",
+    "id": "e152"
+  },
+  {
+    "from": "gigabyte",
+    "to": "nvidia",
+    "type": "supply",
+    "label": "AI server OEM — servers 71.5% of sales, ~90% of them AI servers",
+    "cite": "Gigabyte Q1 2026 results · 2026",
+    "id": "e153"
+  },
+  {
+    "from": "deltaelectronics",
+    "to": "nvidia",
+    "type": "partner",
+    "label": "800VDC rack-power & CDU partner for AI racks",
+    "cite": "Company results · 2026",
+    "id": "e154"
+  },
+  {
+    "from": "teconnectivity",
+    "to": "dell",
+    "type": "supply",
+    "label": "High-speed datacom interconnect for AI servers (broad supply; AI datacom orders +70% YTD)",
+    "cite": "Zacks · Sep 2026",
+    "id": "e155"
+  },
+  {
+    "from": "shinetsu",
+    "to": "tsmc",
+    "type": "supply",
+    "label": "300mm silicon wafers, photoresist & mask blanks for leading-edge fabs (broad supply)",
+    "cite": "Shin-Etsu results · Jan 2026",
+    "id": "e156"
+  },
+  {
+    "from": "unimicron",
+    "to": "packaging",
+    "type": "supply",
+    "label": "ABF package substrates — #2 supplier (~20% of capacity); substrates 52% of revenue",
+    "cite": "Unimicron H1 2026 filings · Aug 2026",
+    "id": "e157"
+  },
+  {
+    "from": "lasertec",
+    "to": "tsmc",
+    "type": "supply",
+    "label": "EUV mask inspection (82.6% share) for leading-edge fabs (broad supply)",
+    "cite": "Lasertec FY2026 results · Oct 2026",
+    "id": "e158"
+  },
+  {
+    "from": "disco",
+    "to": "packaging",
+    "type": "supply",
+    "label": "Dicing, grinding & HBM wafer-thinning equipment (~70–75% global share)",
+    "cite": "Disco results · Oct 22, 2026",
+    "id": "e159"
+  },
+  {
+    "from": "trane",
+    "to": "equinix",
+    "type": "supply",
+    "label": "Data-center chillers & cooling (broad supply; DC cooling revenue +120% on 3-yr stack)",
+    "cite": "Company results · 2026",
+    "id": "e160"
+  },
+  {
+    "from": "johnsoncontrols",
+    "to": "equinix",
+    "type": "supply",
+    "label": "Data-center cooling & CDUs (broad supply; CDU pipeline >$1B)",
+    "cite": "Company results · 2026",
+    "id": "e161"
+  },
+  {
+    "from": "brookfield",
+    "to": "bloomenergy",
+    "type": "partner",
+    "label": "Fuel-cell partnership expanded from $5B to $25B",
+    "cite": "Company release · Nov 2025",
+    "id": "e162"
+  },
+  {
+    "from": "brookfield",
+    "to": "cameco",
+    "type": "partner",
+    "label": "Co-owners of Westinghouse; parties to the $80B US AP1000 partnership",
+    "cite": "Company release · Nov 2025",
+    "id": "e163"
+  },
+  {
+    "from": "blackrock",
+    "to": "mgx",
+    "type": "partner",
+    "label": "Co-founders of the AI Infrastructure Partnership; first deal: Aligned Data Centers (~$40B EV, >5 GW)",
+    "cite": "Company announcement · Oct 2025",
+    "id": "e164"
+  },
+  {
+    "from": "kkr",
+    "to": "blackrock",
+    "type": "partner",
+    "label": "Co-owners (with GIP) of CyrusOne — 60+ data centers, >1 GW",
+    "cite": "Company announcements · 2026",
+    "id": "e165"
   }
 ];
 
@@ -2253,11 +2649,15 @@ export const columns: MapColumn[] = [
       "iren",
       "lambdaai",
       "nscale",
+      "groq",
       "apollo",
       "blackstone",
       "pimco",
       "goldmansachs",
-      "blueowl"
+      "blueowl",
+      "brookfield",
+      "blackrock",
+      "kkr"
     ]
   },
   {
@@ -2275,7 +2675,6 @@ export const columns: MapColumn[] = [
       "cambricon",
       "arm",
       "softbank",
-      "groq",
       "qualcomm",
       "intel",
       "huawei"
@@ -2311,7 +2710,13 @@ export const columns: MapColumn[] = [
       "monolithicpower",
       "fabrinet",
       "corning",
-      "kioxia"
+      "kioxia",
+      "teconnectivity",
+      "shinetsu",
+      "unimicron",
+      "lasertec",
+      "disco",
+      "aaoi"
     ]
   },
   {
@@ -2335,7 +2740,21 @@ export const columns: MapColumn[] = [
       "eaton",
       "schneider",
       "modine",
-      "corescientific"
+      "corescientific",
+      "sanmina",
+      "gigabyte",
+      "deltaelectronics",
+      "trane",
+      "johnsoncontrols",
+      "comfortsystems",
+      "emcor",
+      "quantaservices",
+      "ironmountain",
+      "gds",
+      "vnet",
+      "galaxydigital",
+      "terawulf",
+      "hut8"
     ]
   },
   {
@@ -2350,7 +2769,12 @@ export const columns: MapColumn[] = [
       "oklo",
       "terrapower",
       "bloomenergy",
-      "aep"
+      "aep",
+      "siemensenergy",
+      "cummins",
+      "caterpillar",
+      "generac",
+      "cameco"
     ]
   }
 ];
@@ -2707,6 +3131,118 @@ export const sources: Record<string, SourceRef> = {
   "blueowlAI": {
     "label": "Data Center Frontier · Jul 2026",
     "url": null
+  },
+  "teconnectivityAI": {
+    "label": "Zacks · Sep 2026",
+    "url": null
+  },
+  "sanminaAI": {
+    "label": "Sanmina Q2 FY2026 results · Apr 2026",
+    "url": null
+  },
+  "gigabyteAI": {
+    "label": "Gigabyte Q1 2026 results · 2026",
+    "url": null
+  },
+  "shinetsuAI": {
+    "label": "Shin-Etsu results · Jan 2026",
+    "url": null
+  },
+  "unimicronAI": {
+    "label": "Unimicron H1 2026 filings · Aug 2026",
+    "url": null
+  },
+  "siemensenergyAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "deltaAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "traneAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "johnsoncontrolsAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "cumminsAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "caterpillarAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "comfortsystemsAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "emcorAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "quantaservicesAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "camecoAI": {
+    "label": "Company results · 2026",
+    "url": null
+  },
+  "brookfieldAI": {
+    "label": "Company release · Nov 2025",
+    "url": null
+  },
+  "blackrockAI": {
+    "label": "Company announcement · Oct 2025",
+    "url": null
+  },
+  "kkrAI": {
+    "label": "Company announcements · 2026",
+    "url": null
+  },
+  "ironmountainAI": {
+    "label": "Company filings · 2026",
+    "url": null
+  },
+  "gdsAI": {
+    "label": "GDS Q2 2026 results · Aug 13, 2026",
+    "url": null
+  },
+  "vnetAI": {
+    "label": "VNET Q2 2026 results · 2026",
+    "url": null
+  },
+  "galaxydigitalAI": {
+    "label": "Company 8-K · Aug 5, 2026",
+    "url": null
+  },
+  "terawulfAI": {
+    "label": "Company filings · Oct 15, 2026",
+    "url": null
+  },
+  "hut8AI": {
+    "label": "HUT Q2 2026 results · Aug 4, 2026",
+    "url": null
+  },
+  "generacAI": {
+    "label": "Company announcement · Sep 2026",
+    "url": null
+  },
+  "lasertecAI": {
+    "label": "Lasertec FY2026 results · Oct 2026",
+    "url": null
+  },
+  "discoAI": {
+    "label": "Disco results · Oct 22, 2026",
+    "url": null
+  },
+  "aaoiAI": {
+    "label": "Zacks · Oct 2026",
+    "url": "https://www.zacks.com/stock/news/2988485/aaois-optical-networking-demand-rise-can-it-beat-lite-and-cohr"
   }
 };
 

@@ -686,6 +686,209 @@ export const tickers: Record<string, TickerMeta[]> = {
       "exchange": "NYSE",
       "isUS": true
     }
+  ],
+  "teconnectivity": [
+    {
+      "symbol": "TEL",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "sanmina": [
+    {
+      "symbol": "SANM",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "gigabyte": [
+    {
+      "symbol": "2376.TW",
+      "exchange": "Taiwan",
+      "isUS": false,
+      "note": "Gigabyte — foreign-listed in TWD"
+    }
+  ],
+  "shinetsu": [
+    {
+      "symbol": "4063.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "unimicron": [
+    {
+      "symbol": "3037.TW",
+      "exchange": "Taiwan",
+      "isUS": false,
+      "note": "Unimicron — foreign-listed in TWD"
+    }
+  ],
+  "siemensenergy": [
+    {
+      "symbol": "ENR.DE",
+      "exchange": "Xetra",
+      "isUS": false,
+      "note": "Foreign-listed in EUR — check a Frankfurt exchange source"
+    }
+  ],
+  "deltaelectronics": [
+    {
+      "symbol": "2308.TW",
+      "exchange": "Taiwan",
+      "isUS": false,
+      "note": "Delta Electronics — foreign-listed in TWD"
+    }
+  ],
+  "trane": [
+    {
+      "symbol": "TT",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "johnsoncontrols": [
+    {
+      "symbol": "JCI",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "cummins": [
+    {
+      "symbol": "CMI",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "caterpillar": [
+    {
+      "symbol": "CAT",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "comfortsystems": [
+    {
+      "symbol": "FIX",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "emcor": [
+    {
+      "symbol": "EME",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "quantaservices": [
+    {
+      "symbol": "PWR",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "cameco": [
+    {
+      "symbol": "CCJ",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "brookfield": [
+    {
+      "symbol": "BN",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "blackrock": [
+    {
+      "symbol": "BLK",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "kkr": [
+    {
+      "symbol": "KKR",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "ironmountain": [
+    {
+      "symbol": "IRM",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "gds": [
+    {
+      "symbol": "GDS",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "vnet": [
+    {
+      "symbol": "VNET",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "galaxydigital": [
+    {
+      "symbol": "GLXY",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "terawulf": [
+    {
+      "symbol": "WULF",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "hut8": [
+    {
+      "symbol": "HUT",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "generac": [
+    {
+      "symbol": "GNRC",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "lasertec": [
+    {
+      "symbol": "6920.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "disco": [
+    {
+      "symbol": "6146.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "aaoi": [
+    {
+      "symbol": "AAOI",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
   ]
 };
 
