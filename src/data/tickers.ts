@@ -542,6 +542,150 @@ export const tickers: Record<string, TickerMeta[]> = {
       "isUS": false,
       "note": "Foreign-listed in HKD — check a Hong Kong exchange source"
     }
+  ],
+  "apollo": [
+    {
+      "symbol": "APO",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "blackstone": [
+    {
+      "symbol": "BX",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "goldmansachs": [
+    {
+      "symbol": "GS",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "amphenol": [
+    {
+      "symbol": "APH",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "monolithicpower": [
+    {
+      "symbol": "MPWR",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "ttmtech": [
+    {
+      "symbol": "TTMI",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "teradyne": [
+    {
+      "symbol": "TER",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "advantest": [
+    {
+      "symbol": "6857.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "entegris": [
+    {
+      "symbol": "ENTG",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "ibiden": [
+    {
+      "symbol": "4062.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "fabrinet": [
+    {
+      "symbol": "FN",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "corning": [
+    {
+      "symbol": "GLW",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "kioxia": [
+    {
+      "symbol": "285A.T",
+      "exchange": "Tokyo Stock Exchange",
+      "isUS": false,
+      "note": "Foreign-listed in JPY — check a Tokyo exchange source"
+    }
+  ],
+  "celestica": [
+    {
+      "symbol": "CLS",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "jabil": [
+    {
+      "symbol": "JBL",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "eaton": [
+    {
+      "symbol": "ETN",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "schneider": [
+    {
+      "symbol": "SU.PA",
+      "exchange": "Euronext Paris",
+      "isUS": false,
+      "note": "Foreign-listed in EUR — check a Paris exchange source"
+    }
+  ],
+  "modine": [
+    {
+      "symbol": "MOD",
+      "exchange": "NYSE",
+      "isUS": true
+    }
+  ],
+  "corescientific": [
+    {
+      "symbol": "CORZ",
+      "exchange": "NASDAQ",
+      "isUS": true
+    }
+  ],
+  "blueowl": [
+    {
+      "symbol": "OWL",
+      "exchange": "NYSE",
+      "isUS": true
+    }
   ]
 };
 

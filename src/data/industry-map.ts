@@ -869,6 +869,159 @@ export const nodes: MapNode[] = [
     "desc": "Investment bank in reported talks with Apollo on arranging financing for Oracle's large Nvidia chip purchase.",
     "fact": "In talks with Apollo to arrange money for Oracle's Nvidia chip purchase, per WSJ reporting on the Oct 2026 financing wave.",
     "src": "wsjChipFinancing"
+  },
+  {
+    "id": "amphenol",
+    "name": "Amphenol",
+    "layer": "Fabrication & links",
+    "sub": "APH · connectors & interconnect",
+    "desc": "Connector and interconnect giant whose IT datacom business has become one of the purest large-cap reads on AI server buildouts; closed a ~$10.5B acquisition of CommScope's connectivity business in January 2026.",
+    "fact": "Q2 2026 revenue rose 55% y/y to $8.76B; IT datacom reached 43% of sales, up 89% y/y, with management attributing virtually all sequential growth to AI-related products.",
+    "src": "amphenolAI"
+  },
+  {
+    "id": "monolithicpower",
+    "name": "Monolithic Power Systems",
+    "layer": "Fabrication & links",
+    "sub": "MPWR · board power delivery",
+    "desc": "Power-management chip maker supplying the voltage-regulation layer on AI accelerator boards — the power-semiconductor presence the map previously lacked entirely.",
+    "fact": "Enterprise Data was 38.8% of Q2 2026 revenue ($380.6M, +164% y/y); KeyBanc estimates a ~70% share of Nvidia Vera Rubin power sockets, and Reuters reports dominant Nvidia/AMD power share.",
+    "src": "monolithicAI"
+  },
+  {
+    "id": "ttmtech",
+    "name": "TTM Technologies",
+    "layer": "Fabrication & links",
+    "sub": "TTMI · high-layer-count PCBs",
+    "desc": "US maker of high-layer-count printed circuit boards, RF components and mission systems for AI servers and networking gear — the board layer beneath every accelerator rack.",
+    "fact": "Data Center Computing & Networking reached 40% of net sales in Q2 2026, up 91% y/y with a 1.49 book-to-bill; in October 2026 it added a $400M AI-PCB expansion in China and Penang, taking announced 2025–29 capex to ~$1.6B.",
+    "src": "ttmiAI"
+  },
+  {
+    "id": "teradyne",
+    "name": "Teradyne",
+    "layer": "Fabrication & links",
+    "sub": "TER · semiconductor test equipment",
+    "desc": "Largest US maker of automated test equipment for SoCs and memory — the test layer every AI chip must pass through before shipment, previously absent from the map.",
+    "fact": "Q2 2026 revenue rose 104% y/y to $1.33B, with Semi Test up 128% (84% of sales), SoC compute test up ~600% y/y and record HBM/DRAM memory-test revenue of $212M; management says over 60% of revenue is AI-driven.",
+    "src": "teradyneAI"
+  },
+  {
+    "id": "advantest",
+    "name": "Advantest",
+    "layer": "Fabrication & links",
+    "sub": "6857.T · semiconductor test equipment",
+    "desc": "Japanese test-equipment leader with roughly two-thirds global share of SoC testers; the foreign-major counterpart to Teradyne in the test layer.",
+    "fact": "Holds ~65% global tester share (66% in SoC test); its fiscal-year plan calls for ¥1.714T (~$11B) of revenue, up 51%, on AI-chip test demand.",
+    "src": "advantestAI"
+  },
+  {
+    "id": "entegris",
+    "name": "Entegris",
+    "layer": "Fabrication & links",
+    "sub": "ENTG · semiconductor materials",
+    "desc": "Largest US semiconductor-materials name — filtration, specialty chemicals and advanced materials for leading-edge logic, HBM and packaging; the first representative of the materials layer in the map.",
+    "fact": "Q2 2026 revenue rose 11% y/y to $883M with EPS up 41%; management attributes growth to AI-driven demand across advanced logic, HBM and advanced packaging, with ~75% of sales tracking wafer starts.",
+    "src": "entegrisAI"
+  },
+  {
+    "id": "ibiden",
+    "name": "Ibiden",
+    "layer": "Fabrication & links",
+    "sub": "4062.T · ABF package substrates",
+    "desc": "Japanese substrate maker holding an estimated 70–80% share of the ABF package substrates beneath AI-server chips — a genuine chokepoint layer sitting under every accelerator.",
+    "fact": "Plans ¥500B of capex across FY2026–28, the largest substrate expansion on record; BofA estimates the ABF supply gap widens to ~19–21% by 2027–28.",
+    "src": "ibidenAI"
+  },
+  {
+    "id": "fabrinet",
+    "name": "Fabrinet",
+    "layer": "Fabrication & links",
+    "sub": "FN · optical contract manufacturing",
+    "desc": "Dominant contract manufacturer behind the optical-module brands — it assembles 1.6T transceivers and silicon-photonics products for hyperscalers while the module names take the design credit.",
+    "fact": "FY2026 revenue rose 36% to $4.64B, with optical communications over 75% of sales.",
+    "src": "fabrinetAI"
+  },
+  {
+    "id": "corning",
+    "name": "Corning",
+    "layer": "Fabrication & links",
+    "sub": "GLW · optical fiber & connectivity",
+    "desc": "Glass and fiber giant whose optical fiber has become a named input to AI data-center builds, with direct supply partnerships at Nvidia, Meta and Amazon.",
+    "fact": "The Nvidia partnership announced May 6, 2026 targets 10× optical-connectivity capacity and +50% fiber output across three new US plants; Meta signed a $6B multiyear deal in January 2026 and Amazon a multiyear multibillion deal in Q2 2026, when Optical Communications revenue rose 32% to $2.07B.",
+    "src": "corningAI"
+  },
+  {
+    "id": "kioxia",
+    "name": "Kioxia",
+    "layer": "Fabrication & links",
+    "sub": "285A.T · NAND flash",
+    "desc": "Japanese NAND maker (the former Toshiba Memory) and top-five global supplier — the one major memory maker previously missing from the map; runs its flash joint venture with SanDisk.",
+    "fact": "FY2026 revenue rose 37% y/y to ¥2.34T (~$15.5B); Q1 FY2027 revenue jumped 415% y/y on AI enterprise-SSD demand.",
+    "src": "kioxiaAI"
+  },
+  {
+    "id": "celestica",
+    "name": "Celestica",
+    "layer": "Systems & sites",
+    "sub": "CLS · contract systems builder",
+    "desc": "Contract manufacturer that has become the primary builder of Google's TPU systems and a manufacturing partner for AMD's Helios racks; cloud and hyperscaler work is 81% of revenue.",
+    "fact": "FY2026 revenue forecast raised to $20.5B (+65% y/y) with a ~$34B framework for 2027; rack deliveries for the Broadcom/OpenAI program are expected in late 2026.",
+    "src": "celesticaAI"
+  },
+  {
+    "id": "jabil",
+    "name": "Jabil",
+    "layer": "Systems & sites",
+    "sub": "JBL · contract builder / EMS",
+    "desc": "Contract manufacturing giant building servers, racks, liquid cooling, power and networking gear for three hyperscalers — carrying one of the largest disclosed AI revenue lines in the chain.",
+    "fact": "Guided FY2026 AI-related revenue to $13.6B, up ~50% from $9B in FY2025, on ~$35B of total revenue — its AI line alone is roughly 3× TTM Technologies' total revenue.",
+    "src": "jabilAI"
+  },
+  {
+    "id": "eaton",
+    "name": "Eaton",
+    "layer": "Systems & sites",
+    "sub": "ETN · data-center electrical equipment",
+    "desc": "Power-management major supplying switchgear, UPS and distribution into data centers — Vertiv's larger electrical peer, and a direct read on the lead-time bottleneck gating AI capacity.",
+    "fact": "Q2 2026 revenue was a record $8.5B (+21% y/y); Electrical Americas data-center revenue grew ~65% y/y with data-center orders up ~240% on a rolling basis, and switchgear lead times run 52–104 weeks.",
+    "src": "eatonAI"
+  },
+  {
+    "id": "schneider",
+    "name": "Schneider Electric",
+    "layer": "Systems & sites",
+    "sub": "SU.PA · data-center electrical equipment",
+    "desc": "French power-equipment major — arguably the world's #1 data-center electrical vendor — spanning switchgear, UPS and cooling for AI halls.",
+    "fact": "Q3 2026 revenue hit a record €11.46B (+16.9% organic); data-center orders grew triple-digit and are now ~30% of total orders, prompting two FY2026 guidance raises.",
+    "src": "schneiderAI"
+  },
+  {
+    "id": "modine",
+    "name": "Modine",
+    "layer": "Systems & sites",
+    "sub": "MOD · data-center cooling",
+    "desc": "Thermal-management maker pivoting into a data-center cooling pure play, supplying chillers and cooling distribution for AI halls; spinning off its non-data-center business.",
+    "fact": "Data-center revenue reached $1.1B in FY2026 (+73% y/y, ~41% of sales), backed by a >$4B long-term supply agreement covering 2027–2029; data-center revenue is guided above $2B by FY2028.",
+    "src": "modineAI"
+  },
+  {
+    "id": "corescientific",
+    "name": "Core Scientific",
+    "layer": "Systems & sites",
+    "sub": "CORZ · neocloud hosting",
+    "desc": "Former bitcoin miner turned hosting landlord — CoreWeave's largest hosting counterparty, ranked #3 among neoclouds by live power, ahead of tracked Applied Digital.",
+    "fact": "~590 MW is contracted to CoreWeave across six sites, worth ~$10.2B of projected 12-year revenue; colocation became its largest segment in Q1 2026, with a further ~530 MW leased to AMD from 2027.",
+    "src": "corescientificAI"
+  },
+  {
+    "id": "blueowl",
+    "name": "Blue Owl Capital",
+    "layer": "Cloud & compute",
+    "sub": "OWL · equity sponsor · data-center JV owner",
+    "desc": "Alternative asset manager on the equity side of AI infrastructure — the owner, not the lender: it holds the majority equity in Meta's Hyperion data-center JV and was an early Crusoe backer.",
+    "fact": "Blue Owl owns 80% of the Meta Hyperion JV (~$27–29B phase-1 development, scaling toward 5 GW / >$50B per Meta); the JV's $27.3B debt package was led by PIMCO — the map previously had the lender, not the owner.",
+    "src": "blueowlAI"
   }
 ];
 
@@ -1872,6 +2025,190 @@ export const edges: MapEdge[] = [
     "label": "Up to $42B convertible-note chip financing agreed; junior tranche flagged as conflict risk (reported)",
     "cite": "Reuters · Oct 2026",
     "id": "e124"
+  },
+  {
+    "from": "teradyne",
+    "to": "packaging",
+    "type": "supply",
+    "label": "SoC & memory test systems for AI chips (Semi Test +128% y/y)",
+    "cite": "Zacks · Sep 16, 2026",
+    "id": "e125"
+  },
+  {
+    "from": "advantest",
+    "to": "packaging",
+    "type": "supply",
+    "label": "Chip testers — ~65% global share — into the foundry/OSAT chain",
+    "cite": "The Inference · Oct 2026",
+    "id": "e126"
+  },
+  {
+    "from": "entegris",
+    "to": "tsmc",
+    "type": "supply",
+    "label": "Fab materials & contamination control for advanced logic, HBM and packaging",
+    "cite": "TechTimes · Aug 4, 2026",
+    "id": "e127"
+  },
+  {
+    "from": "ibiden",
+    "to": "packaging",
+    "type": "supply",
+    "label": "ABF package substrates (est. 70–80% AI-server share) feeding advanced packaging",
+    "cite": "BofA via 404K Research · 2026",
+    "id": "e128"
+  },
+  {
+    "from": "amphenol",
+    "to": "dell",
+    "type": "supply",
+    "label": "Connectors & interconnect for AI servers (IT datacom +89% y/y)",
+    "cite": "Zacks · Oct 2, 2026",
+    "id": "e129"
+  },
+  {
+    "from": "ttmtech",
+    "to": "supermicro",
+    "type": "supply",
+    "label": "High-layer-count PCBs for AI servers & networking gear",
+    "cite": "GlobeNewswire · Oct 12, 2026",
+    "id": "e130"
+  },
+  {
+    "from": "monolithicpower",
+    "to": "nvidia",
+    "type": "supply",
+    "label": "Board power management; ~70% share of Vera Rubin power sockets (KeyBanc est.)",
+    "cite": "Reuters · Jul 2026",
+    "id": "e131"
+  },
+  {
+    "from": "monolithicpower",
+    "to": "amd",
+    "type": "supply",
+    "label": "Power delivery for AI accelerators",
+    "cite": "Reuters · Jul 2026",
+    "id": "e132"
+  },
+  {
+    "from": "fabrinet",
+    "to": "optics",
+    "type": "supply",
+    "label": "Contract manufactures 1.6T transceivers & silicon photonics for module makers",
+    "cite": "Motley Fool · Sep 18, 2026",
+    "id": "e133"
+  },
+  {
+    "from": "corning",
+    "to": "nvidia",
+    "type": "partner",
+    "label": "Partnership: 10× optical-connectivity capacity, +50% fiber output, 3 new US plants",
+    "cite": "Corning · May 6, 2026",
+    "id": "e134"
+  },
+  {
+    "from": "corning",
+    "to": "metadc",
+    "type": "supply",
+    "label": "$6B multiyear fiber & optical connectivity deal (Jan 2026)",
+    "cite": "Barron's · 2026",
+    "id": "e135"
+  },
+  {
+    "from": "corning",
+    "to": "aws",
+    "type": "supply",
+    "label": "Multiyear, multibillion-dollar fiber supply deal (2026)",
+    "cite": "Corning Q2 2026 release",
+    "id": "e136"
+  },
+  {
+    "from": "kioxia",
+    "to": "sandisk",
+    "type": "partner",
+    "label": "Flash memory manufacturing JV partner",
+    "cite": "Japan Stock Pulse · May 15, 2026",
+    "id": "e137"
+  },
+  {
+    "from": "celestica",
+    "to": "gcloud",
+    "type": "supply",
+    "label": "Primary builder of Google TPU systems",
+    "cite": "Bernstein · Jul 27, 2026",
+    "id": "e138"
+  },
+  {
+    "from": "celestica",
+    "to": "amd",
+    "type": "supply",
+    "label": "Manufacturing partner for AMD Helios AI systems",
+    "cite": "Bernstein · Jul 27, 2026",
+    "id": "e139"
+  },
+  {
+    "from": "celestica",
+    "to": "openai",
+    "type": "supply",
+    "label": "Rack deliveries for the Broadcom/OpenAI program expected late 2026 (reported)",
+    "cite": "Bernstein · Jul 27, 2026",
+    "id": "e140"
+  },
+  {
+    "from": "eaton",
+    "to": "equinix",
+    "type": "supply",
+    "label": "Data-center switchgear & power distribution (broad supply; DC orders +~240%)",
+    "cite": "MarketBeat · Sep 17, 2026",
+    "id": "e141"
+  },
+  {
+    "from": "schneider",
+    "to": "equinix",
+    "type": "supply",
+    "label": "Data-center electrical & power systems (broad supply; DC ~30% of orders)",
+    "cite": "Company results · Oct 16, 2026",
+    "id": "e142"
+  },
+  {
+    "from": "modine",
+    "to": "equinix",
+    "type": "supply",
+    "label": "Data-center cooling systems (>$4B supply agreement, 2027–29)",
+    "cite": "MarketBeat · May 2026",
+    "id": "e143"
+  },
+  {
+    "from": "corescientific",
+    "to": "coreweave",
+    "type": "supply",
+    "label": "~590 MW hosting contracted across six sites (~$10.2B projected 12-yr revenue)",
+    "cite": "CoinDesk · 2026",
+    "id": "e144"
+  },
+  {
+    "from": "corescientific",
+    "to": "amd",
+    "type": "supply",
+    "label": "~530 MW leased to AMD from 2027 (reported)",
+    "cite": "mrkt30 neocloud ranking · Oct 2026",
+    "id": "e145"
+  },
+  {
+    "from": "blueowl",
+    "to": "metadc",
+    "type": "money",
+    "label": "80% equity owner of Meta's Hyperion data-center JV (~$27–29B phase 1)",
+    "cite": "Data Center Frontier · Jul 2026",
+    "id": "e146"
+  },
+  {
+    "from": "blueowl",
+    "to": "crusoe",
+    "type": "money",
+    "label": "Early financial backer",
+    "cite": "DataCenterDynamics · 2025",
+    "id": "e147"
   }
 ];
 
@@ -1919,7 +2256,8 @@ export const columns: MapColumn[] = [
       "apollo",
       "blackstone",
       "pimco",
-      "goldmansachs"
+      "goldmansachs",
+      "blueowl"
     ]
   },
   {
@@ -1963,7 +2301,17 @@ export const columns: MapColumn[] = [
       "lamresearch",
       "kla",
       "tokyoelectron",
-      "coherentcorp"
+      "coherentcorp",
+      "advantest",
+      "teradyne",
+      "entegris",
+      "ibiden",
+      "amphenol",
+      "ttmtech",
+      "monolithicpower",
+      "fabrinet",
+      "corning",
+      "kioxia"
     ]
   },
   {
@@ -1981,7 +2329,13 @@ export const columns: MapColumn[] = [
       "hpe",
       "arista",
       "ciphermining",
-      "lenovo"
+      "lenovo",
+      "celestica",
+      "jabil",
+      "eaton",
+      "schneider",
+      "modine",
+      "corescientific"
     ]
   },
   {
@@ -2285,6 +2639,74 @@ export const sources: Record<string, SourceRef> = {
   "anthropicFinancingReuters": {
     "label": "Reuters · Oct 2026",
     "url": "https://www.rdworldonline.com/broadcom-lines-up-60-billion-as-suppliers-finance-the-frontier-labs-compute/"
+  },
+  "amphenolAI": {
+    "label": "Zacks · Oct 2, 2026",
+    "url": null
+  },
+  "monolithicAI": {
+    "label": "Reuters · Jul 2026",
+    "url": null
+  },
+  "ttmiAI": {
+    "label": "GlobeNewswire · Oct 12, 2026",
+    "url": null
+  },
+  "teradyneAI": {
+    "label": "Zacks · Sep 16, 2026",
+    "url": null
+  },
+  "advantestAI": {
+    "label": "The Inference · Oct 2026",
+    "url": null
+  },
+  "entegrisAI": {
+    "label": "TechTimes · Aug 4, 2026",
+    "url": null
+  },
+  "ibidenAI": {
+    "label": "BofA via 404K Research · 2026",
+    "url": null
+  },
+  "fabrinetAI": {
+    "label": "Motley Fool · Sep 18, 2026",
+    "url": null
+  },
+  "corningAI": {
+    "label": "Barron's · 2026",
+    "url": null
+  },
+  "kioxiaAI": {
+    "label": "Japan Stock Pulse · May 15, 2026",
+    "url": null
+  },
+  "celesticaAI": {
+    "label": "Bernstein · Jul 27, 2026",
+    "url": null
+  },
+  "jabilAI": {
+    "label": "Jabil Q3 FY2026 results · Jun 2026",
+    "url": null
+  },
+  "eatonAI": {
+    "label": "MarketBeat · Sep 17, 2026",
+    "url": null
+  },
+  "schneiderAI": {
+    "label": "Company results · Oct 16, 2026",
+    "url": null
+  },
+  "modineAI": {
+    "label": "MarketBeat · May 2026",
+    "url": null
+  },
+  "corescientificAI": {
+    "label": "CoinDesk · 2026",
+    "url": null
+  },
+  "blueowlAI": {
+    "label": "Data Center Frontier · Jul 2026",
+    "url": null
   }
 };
 
