@@ -597,7 +597,7 @@ export const nodes: MapNode[] = [
     "layer": "Cloud & compute",
     "sub": "Abu Dhabi · $100B fund",
     "desc": "Abu Dhabi sovereign investment vehicle, chaired by Sheikh Tahnoon bin Zayed, that is an equity funder of Stargate LLC and a backer of OpenAI, Anthropic, xAI and Databricks.",
-    "fact": "Targets roughly $100B in AUM; participated in a $30B Anthropic round (Feb 2026) and a $10B Databricks round at a $62B valuation.",
+    "fact": "Targets roughly $100B in AUM; participated in a $30B Anthropic round (Feb 2026) and Databricks' $10B round (Dec 2024, then a $62B valuation; $190B by Aug 2026).",
     "src": "mgx"
   },
   {
@@ -1938,7 +1938,7 @@ export const edges: MapEdge[] = [
     "from": "mgx",
     "to": "databricks",
     "type": "money",
-    "label": "participated in $10B round at $62B valuation",
+    "label": "participated in $10B round (Dec 2024, then $62B valuation)",
     "cite": "Crunchbase News · 2026",
     "id": "e82"
   },
