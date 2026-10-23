@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { columns, edges, nodeById, nodes, type MapEdge } from "@/data/industry-map";
+import { columns, edges, nodeById, nodes, searchNodes, type MapEdge } from "@/data/industry-map";
 import { tickers } from "@/data/tickers";
 import type { QuoteMap } from "@/hooks/useQuotes";
 import type { EarningsMap } from "@/app/api/earnings/route";
@@ -18,17 +18,27 @@ interface Position {
 }
 
 const COL_X = [8, 225, 442, 659, 876, 1093];
-const CHART_H = 856;
+const NODE_W = 198;
+const NODE_H = 46;
+const NODE_GAP_Y = 14; // fixed vertical gap between node boxes — never shrinks as a column
+// grows, unlike the old "divide a fixed canvas height by node count" approach, which is
+// what let a 34-node column cram its boxes into a ~25px slot and overlap by half their
+// height. The canvas grows taller instead; the page scrolls.
+const TOP_PAD = 34;
+const BOTTOM_PAD = 24;
+const MIN_CHART_H = 900; // keep the original minimum height for small columns
 
-function computePositions(): Record<string, Position> {
+function computePositions(): { positions: Record<string, Position>; chartHeight: number } {
   const positions: Record<string, Position> = {};
+  let chartHeight = MIN_CHART_H;
   columns.forEach((col, ci) => {
-    const gap = CHART_H / col.ids.length;
     col.ids.forEach((id, idx) => {
-      positions[id] = { x: COL_X[ci], y: 34 + idx * gap, w: 198, h: 46 };
+      positions[id] = { x: COL_X[ci], y: TOP_PAD + idx * (NODE_H + NODE_GAP_Y), w: NODE_W, h: NODE_H };
     });
+    const colHeight = TOP_PAD + col.ids.length * (NODE_H + NODE_GAP_Y) - NODE_GAP_Y + BOTTOM_PAD;
+    if (colHeight > chartHeight) chartHeight = colHeight;
   });
-  return positions;
+  return { positions, chartHeight };
 }
 
 function edgePath(a: Position, b: Position): string {
@@ -71,24 +81,18 @@ export default function NetworkGraph({
   quotes: QuoteMap;
   earnings: EarningsMap;
 }) {
-  const positions = useMemo(() => computePositions(), []);
+  const { positions, chartHeight } = useMemo(() => computePositions(), []);
   const [theme] = useTheme();
   const arrowColors = EDGE_COLORS[theme];
 
-  const q = search.trim().toLowerCase();
-  const matches = q
-    ? new Set(
-        nodes
-          .filter((n) => (n.name + " " + n.layer + " " + n.sub + " " + n.desc + " " + n.fact).toLowerCase().includes(q))
-          .map((n) => n.id)
-      )
-    : null;
+  const matchList = search.trim() ? searchNodes(search) : null;
+  const matches = matchList ? new Set(matchList.map((n) => n.id)) : null;
 
   const connected = selected ? edges.filter((e) => e.from === selected || e.to === selected) : [];
   const connectedIds = new Set(connected.flatMap((e) => [e.from, e.to]));
 
   return (
-    <svg id="network" viewBox="0 0 1320 900" role="img" aria-label="Network map of the AI industry value chain">
+    <svg id="network" viewBox={`0 0 1320 ${chartHeight}`} role="img" aria-label="Network map of the AI industry value chain">
       {columns.map((col, ci) => (
         <text key={col.label} x={COL_X[ci]} y={18} className="layer-label">
           {col.label}
@@ -139,6 +143,7 @@ export default function NetworkGraph({
           return (
             <g
               key={n.id}
+              id={`graph-node-${n.id}`}
               className={["node", isSelected ? "active" : "", isMuted ? "muted" : ""].filter(Boolean).join(" ")}
               transform={`translate(${pos.x} ${pos.y})`}
               tabIndex={0}

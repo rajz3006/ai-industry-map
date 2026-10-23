@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { edges, nodes } from "@/data/industry-map";
+import { edges, nodes, searchNodes } from "@/data/industry-map";
 import { allUSSymbols } from "@/data/tickers";
 import { useQuotes } from "@/hooks/useQuotes";
 import { useEarnings } from "@/hooks/useEarnings";
@@ -95,6 +95,19 @@ export default function IndustryMap() {
   function selectNode(id: string) {
     setSelected(id);
     setView("network");
+  }
+
+  // The map grew to 138 nodes across 6 columns, some 30+ deep — scrolling to hunt for a
+  // company by eye is no longer practical. Jump to the first match and select it so the
+  // dossier panel confirms what was found, same as clicking the node directly.
+  const searchMatches = search.trim() ? searchNodes(search) : null;
+  function runSearch() {
+    if (!searchMatches || searchMatches.length === 0) return;
+    const target = searchMatches[0];
+    selectNode(target.id);
+    requestAnimationFrame(() => {
+      document.getElementById(`graph-node-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   return (
@@ -204,20 +217,41 @@ export default function IndustryMap() {
           </button>
         </div>
         {view === "network" && (
-          <label className="search">
-            <span className="sr-only">Find a company</span>
-            <input
-              type="search"
-              placeholder="Find a company…"
-              aria-label="Find a company"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-              <path d="m16.5 16.5 4 4" stroke="currentColor" strokeWidth="2" />
-            </svg>
-          </label>
+          <form
+            className="search"
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              runSearch();
+            }}
+          >
+            <label>
+              <span className="sr-only">Find a company</span>
+              <input
+                type="search"
+                placeholder="Find a company…"
+                aria-label="Find a company"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            {searchMatches && (
+              <span className="search-count">
+                {searchMatches.length === 0 ? "No matches" : `${searchMatches.length} match${searchMatches.length === 1 ? "" : "es"}`}
+              </span>
+            )}
+            <button
+              type="submit"
+              className="search-go"
+              aria-label="Jump to the first match"
+              disabled={!searchMatches || searchMatches.length === 0}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                <path d="m16.5 16.5 4 4" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </button>
+          </form>
         )}
       </nav>
 

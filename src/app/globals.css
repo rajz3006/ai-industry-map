@@ -356,26 +356,53 @@ h1 {
   border-color: var(--ink);
 }
 .search {
-  position: relative;
-  width: min(330px, 36vw);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(380px, 40vw);
+}
+.search label {
+  flex: 1;
+  min-width: 0;
 }
 .search input {
   width: 100%;
   background: var(--panel);
   border: 1px solid var(--border-input);
   color: var(--ink);
-  padding: 9px 36px 9px 12px;
+  padding: 9px 12px;
   outline: none;
 }
 .search input:focus {
   border-color: var(--focus);
 }
-.search svg {
-  position: absolute;
-  right: 11px;
-  top: 10px;
+.search-count {
+  font: 500 10px "DM Mono", monospace;
   color: var(--muted);
-  pointer-events: none;
+  white-space: nowrap;
+}
+.search-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  background: var(--panel);
+  border: 1px solid var(--border-input);
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0;
+}
+.search-go:hover:not(:disabled),
+.search-go:focus-visible {
+  color: var(--ink);
+  border-color: var(--focus);
+}
+.search-go:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* Theme toggle — sits beside the refresh-interval select in the toolbar. */

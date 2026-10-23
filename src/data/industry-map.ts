@@ -3247,3 +3247,12 @@ export const sources: Record<string, SourceRef> = {
 };
 
 export const nodeById: Record<string, MapNode> = Object.fromEntries(nodes.map((n) => [n.id, n]));
+
+/** Nodes whose name/layer/sub/desc/fact matches `query` (case-insensitive substring).
+ * Shared by the graph's mute-non-matches highlighting and the "jump to" search action, so
+ * both agree on what counts as a match. Empty/whitespace query returns no matches. */
+export function searchNodes(query: string): MapNode[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return nodes.filter((n) => (n.name + " " + n.layer + " " + n.sub + " " + n.desc + " " + n.fact).toLowerCase().includes(q));
+}
