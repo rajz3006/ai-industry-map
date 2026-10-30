@@ -114,3 +114,27 @@ export async function alpacaGetBars(
   }
   return bars;
 }
+
+export interface AlpacaSnapshot {
+  latestTrade?: { p: number; t: string };
+  dailyBar?: AlpacaBar;
+  prevDailyBar?: AlpacaBar;
+}
+
+/** Latest trade + current and previous daily bar for every symbol in ONE request — what the
+ * live quote poll uses so ~100 symbols cost a single call instead of one call per symbol. */
+export async function alpacaGetSnapshots(symbols: string[]): Promise<Record<string, AlpacaSnapshot>> {
+  const creds = getAlpacaCreds();
+  if (!creds) {
+    throw new AlpacaError("ALPACA_API_KEY/ALPACA_SECRET_KEY are not configured on the server.");
+  }
+  const qs = new URLSearchParams({ symbols: symbols.join(","), feed: alpacaDataFeed() });
+  const res = await fetch(`${BASE_URL}/v2/stocks/snapshots?${qs.toString()}`, {
+    headers: { "APCA-API-KEY-ID": creds.key, "APCA-API-SECRET-KEY": creds.secret },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new AlpacaError(`Alpaca snapshot request failed (${res.status})`, res.status);
+  }
+  return (await res.json()) as Record<string, AlpacaSnapshot>;
+}

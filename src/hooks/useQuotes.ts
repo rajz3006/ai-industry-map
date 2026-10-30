@@ -107,7 +107,8 @@ export function useQuotes(symbols: string[], intervalMs: number): UseQuotesResul
           setQuotes((prev) => ({ ...prev, ...data }));
           setProgress({ loaded, total: symbolList.length });
         },
-        { signal: controller.signal }
+        // Quotes are served from one batched upstream call, so big chunks are cheap.
+        { signal: controller.signal, chunkSize: 50 }
       );
       if (!cancelled) {
         setLoading(false);

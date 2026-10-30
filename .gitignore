@@ -43,3 +43,6 @@ next-env.d.ts
 
 # backtest run output (generated, re-run anytime)
 /scripts/output/
+
+# local research workspace (backtests, downloaded market data, notes) - never commit
+/research/
