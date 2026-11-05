@@ -20,9 +20,17 @@
 // once a real key is added, switch BASE_URL's path segments to "/stable" per-endpoint instead.
 
 import { cacheGet, cacheSet } from "@/lib/finnhub";
+import { diskGet, diskSet, takeFmpBudget } from "@/lib/diskCache";
+import { getSecStatements } from "@/lib/secStatements";
+import { fetchCompanyProfile } from "@/lib/companyProfile";
 
-const BASE_URL = "https://financialmodelingprep.com/api/v3";
-const CACHE_TTL_MS = 8 * 60 * 60 * 1000; // 8h: these are quarterly-ish figures; keeps us well under 250 req/day
+// FMP retired the legacy /api/v3 paths (403 "Legacy Endpoint" for keys created after 2025-08-31); the
+// /stable API takes the symbol as a ?symbol= query parameter.
+const BASE_URL = "https://financialmodelingprep.com/stable";
+const CACHE_TTL_MS = 8 * 60 * 60 * 1000; // in-process cache
+// Quarterly-ish figures: persisted to disk (.cache/fmp) so dev-server restarts don't re-spend the
+// 250 req/day quota. Only successful results are persisted.
+const DISK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function getFmpKey(): string | null {
   const key = process.env.FMP_API_KEY;
@@ -45,11 +53,21 @@ async function fmpGet<T>(path: string, params: Record<string, string | number> =
   if (!key) {
     throw new FmpError("FMP_API_KEY is not configured on the server.");
   }
+  // The free plan only covers some symbols (others answer 402). Remember refusals on disk so an
+  // uncovered symbol costs one call per week instead of one per request.
+  const symParam = typeof params.symbol === "string" ? params.symbol : null;
+  if (symParam && (await diskGet(`nocoverage:${symParam}`, DISK_TTL_MS))) {
+    throw new FmpError(`FMP plan does not cover ${symParam} (cached refusal).`, 402);
+  }
+  if (!(await takeFmpBudget())) {
+    throw new FmpError("FMP daily call budget used up (free plan: 250/day).", 429);
+  }
   const qs = new URLSearchParams({
     ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])),
     apikey: key,
   });
   const res = await fetch(`${BASE_URL}${path}?${qs.toString()}`, { cache: "no-store" });
+  if (res.status === 402 && symParam) await diskSet(`nocoverage:${symParam}`, true);
   if (!res.ok) {
     throw new FmpError(`FMP request failed (${res.status}) for ${path}`, res.status);
   }
@@ -87,6 +105,57 @@ function pickStr(obj: RawRow | undefined, keys: string[]): string | null {
   return null;
 }
 
+interface Statements {
+  income: RawRow[]; // newest first
+  balance?: RawRow;
+  cashflow?: RawRow;
+  source: "SEC EDGAR" | "FMP";
+}
+
+/** Annual income (up to 5 years), latest balance sheet and latest cash flow. SEC EDGAR first (free,
+ * no FMP quota); FMP's three statement endpoints only when SEC has no usable USD data for the
+ * symbol. Memory + 7-day disk cache. Never throws. */
+async function getStatements(sym: string): Promise<Statements | null> {
+  const cacheKey = `statements:${sym}`;
+  const cached = cacheGet<Statements | null>(cacheKey);
+  if (cached !== undefined) return cached;
+  const onDisk = await diskGet<Statements>(cacheKey, DISK_TTL_MS);
+  if (onDisk) {
+    cacheSet(cacheKey, onDisk, CACHE_TTL_MS);
+    return onDisk;
+  }
+
+  let result: Statements | null = null;
+  const sec = await getSecStatements(sym);
+  // SEC data whose latest fiscal year is >18 months old (e.g. a foreign filer whose newest 20-F isn't
+  // tagged in USD) is treated as missing, so the FMP statements are used instead.
+  const secFresh = !!sec && sec.income.length > 0 && Date.now() - Date.parse(String(sec.income[0].date)) < 550 * 86_400_000;
+  if (sec && secFresh) {
+    result = { ...sec, source: "SEC EDGAR" };
+  } else if (getFmpKey()) {
+    let income: RawRow[] = [];
+    try {
+      const data = await fmpGet<RawRow[]>("/income-statement", { symbol: sym, period: "annual", limit: 5 });
+      if (Array.isArray(data)) income = data;
+    } catch {
+      income = [];
+    }
+    const [balance, cashflow] = await Promise.all([
+      fetchFirstRow("/balance-sheet-statement", { symbol: sym, period: "annual", limit: 1 }),
+      fetchFirstRow("/cash-flow-statement", { symbol: sym, period: "annual", limit: 1 }),
+    ]);
+    if (income.length > 0 || balance || cashflow) result = { income, balance, cashflow, source: "FMP" };
+  }
+
+  if (result) {
+    await diskSet(cacheKey, result);
+    cacheSet(cacheKey, result, CACHE_TTL_MS);
+  } else {
+    cacheSet(cacheKey, null, 30 * 60 * 1000); // retry in 30 min, never persist a failure
+  }
+  return result;
+}
+
 export interface FmpCashFlowRow {
   date: string | null;
   operatingCashFlow: number | null;
@@ -103,16 +172,8 @@ export interface FmpCashFlowRow {
 /** Latest annual cash-flow-statement row (period=annual, limit=1). Shared by getFundamentals()
  * (FCF fallback) and managementSignals.ts's getBuybackSignal() so both reuse one cached fetch. */
 export async function getAnnualCashFlow(symbol: string): Promise<FmpCashFlowRow | null> {
-  if (!getFmpKey()) return null;
-  const cacheKey = `fmp:cashflow:${symbol.toUpperCase()}`;
-  const cached = cacheGet<FmpCashFlowRow | null>(cacheKey);
-  if (cached !== undefined) return cached;
-
-  const row = await fetchFirstRow(`/cash-flow-statement/${symbol}`, { period: "annual", limit: 1 });
-  if (!row) {
-    cacheSet(cacheKey, null, CACHE_TTL_MS);
-    return null;
-  }
+  const row = (await getStatements(symbol.toUpperCase()))?.cashflow;
+  if (!row) return null;
   const result: FmpCashFlowRow = {
     date: pickStr(row, ["date"]),
     operatingCashFlow: pick(row, ["operatingCashFlow", "netCashProvidedByOperatingActivities"]),
@@ -123,7 +184,6 @@ export async function getAnnualCashFlow(symbol: string): Promise<FmpCashFlowRow 
     netIncome: pick(row, ["netIncome"]),
     depreciationAndAmortization: pick(row, ["depreciationAndAmortization"]),
   };
-  cacheSet(cacheKey, result, CACHE_TTL_MS);
   return result;
 }
 
@@ -161,7 +221,7 @@ export async function getRiskFreeRate(): Promise<RiskFreeRate> {
   // some to year10Yield etc. — pick() defends against that).
   let row: RawRow | undefined;
   try {
-    const rows = await fmpGet<RawRow[]>("/treasury", { limit: 1 });
+    const rows = await fmpGet<RawRow[]>("/treasury-rates", { limit: 1 });
     row = Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined;
   } catch {
     row = undefined;
@@ -200,18 +260,7 @@ export interface AnnualIncomeRow {
  * the intrinsic-value engine uses it for the 5-year revenue CAGR (growth input) and for
  * normalizing owner earnings across the cycle (cyclicals guard). Never throws. */
 export async function getAnnualIncomeHistory(symbol: string, limit = 5): Promise<AnnualIncomeRow[]> {
-  if (!getFmpKey()) return [];
-  const sym = symbol.toUpperCase();
-  const cacheKey = `fmp:income-history:${sym}:${limit}`;
-  const cached = cacheGet<AnnualIncomeRow[]>(cacheKey);
-  if (cached !== undefined) return cached;
-  let rows: RawRow[] = [];
-  try {
-    const data = await fmpGet<RawRow[]>(`/income-statement/${sym}`, { period: "annual", limit });
-    if (Array.isArray(data)) rows = data;
-  } catch {
-    rows = [];
-  }
+  const rows = ((await getStatements(symbol.toUpperCase()))?.income ?? []).slice(0, limit);
   const out: AnnualIncomeRow[] = rows.map((row) => ({
     date: pickStr(row, ["date"]),
     revenue: pick(row, ["revenue"]),
@@ -223,23 +272,14 @@ export async function getAnnualIncomeHistory(symbol: string, limit = 5): Promise
     incomeBeforeTax: pick(row, ["incomeBeforeTax", "earningsBeforeTax"]),
     incomeTaxExpense: pick(row, ["incomeTaxExpense", "taxExpense", "provisionForIncomeTaxes"]),
   }));
-  cacheSet(cacheKey, out, CACHE_TTL_MS);
   return out;
 }
 
 /** Net debt = total debt − cash & equivalents, from the latest annual balance sheet. Used to
  * bridge enterprise value → equity value in the intrinsic-value engine. Never throws. */
 export async function getNetDebt(symbol: string): Promise<number | null> {
-  if (!getFmpKey()) return null;
-  const sym = symbol.toUpperCase();
-  const cacheKey = `fmp:net-debt:${sym}`;
-  const cached = cacheGet<number | null>(cacheKey);
-  if (cached !== undefined) return cached;
-  const row = await fetchFirstRow(`/balance-sheet-statement/${sym}`, { period: "annual", limit: 1 });
-  if (!row) {
-    cacheSet(cacheKey, null, CACHE_TTL_MS);
-    return null;
-  }
+  const row = (await getStatements(symbol.toUpperCase()))?.balance;
+  if (!row) return null;
   const totalDebt =
     pick(row, ["totalDebt"]) ??
     (() => {
@@ -248,9 +288,7 @@ export async function getNetDebt(symbol: string): Promise<number | null> {
       return st != null || lt != null ? (st ?? 0) + (lt ?? 0) : null;
     })();
   const cash = pick(row, ["cashAndCashEquivalents", "cashAndShortTermInvestments"]);
-  const netDebt = totalDebt != null && cash != null ? totalDebt - cash : totalDebt;
-  cacheSet(cacheKey, netDebt, CACHE_TTL_MS);
-  return netDebt;
+  return totalDebt != null && cash != null ? totalDebt - cash : totalDebt;
 }
 
 export interface FmpFundamentals {
@@ -288,25 +326,30 @@ export interface FmpFundamentals {
  * metric set and flag a data warning" per this feature's spec, not as an error.
  */
 export async function getFundamentals(symbol: string): Promise<FmpFundamentals | null> {
-  if (!getFmpKey()) return null;
-
   const sym = symbol.toUpperCase();
   const cacheKey = `fmp:fundamentals:${sym}`;
   const cached = cacheGet<FmpFundamentals | null>(cacheKey);
   if (cached !== undefined) return cached;
+  const onDisk = await diskGet<FmpFundamentals>(cacheKey, DISK_TTL_MS);
+  if (onDisk) {
+    cacheSet(cacheKey, onDisk, CACHE_TTL_MS);
+    return onDisk;
+  }
 
-  const [keyMetrics, ratios, incomeGrowth, balanceSheet, incomeStatement, cashFlow] = await Promise.all([
-    fetchFirstRow(`/key-metrics-ttm/${sym}`),
-    fetchFirstRow(`/ratios-ttm/${sym}`),
-    fetchFirstRow(`/income-statement-growth/${sym}`, { period: "annual", limit: 1 }),
-    fetchFirstRow(`/balance-sheet-statement/${sym}`, { period: "annual", limit: 1 }),
-    fetchFirstRow(`/income-statement/${sym}`, { period: "annual", limit: 1 }),
-    getAnnualCashFlow(sym),
+  // FMP quota: only the two TTM endpoints (2 calls/symbol). Statements come from SEC EDGAR (see
+  // getStatements), and revenue growth is derived from the income history instead of its own call.
+  const [keyMetrics, ratios, statements] = await Promise.all([
+    fetchFirstRow("/key-metrics-ttm", { symbol: sym }),
+    fetchFirstRow("/ratios-ttm", { symbol: sym }),
+    getStatements(sym),
   ]);
+  const incomeStatement = statements?.income[0];
+  const balanceSheet = statements?.balance;
+  const cashFlow = await getAnnualCashFlow(sym);
 
   // Total failure (bad/missing key rejected everywhere, network down, unknown symbol everywhere) —
   // degrade to null so callers fall back to Finnhub rather than showing an all-blank Step 3/4.
-  if (!keyMetrics && !ratios && !incomeGrowth && !balanceSheet && !incomeStatement && !cashFlow) {
+  if (!keyMetrics && !ratios && !balanceSheet && !incomeStatement && !cashFlow) {
     cacheSet(cacheKey, null, CACHE_TTL_MS);
     return null;
   }
@@ -314,10 +357,7 @@ export async function getFundamentals(symbol: string): Promise<FmpFundamentals |
   const sources: string[] = [];
   if (keyMetrics) sources.push("FMP /key-metrics-ttm");
   if (ratios) sources.push("FMP /ratios-ttm");
-  if (incomeGrowth) sources.push("FMP /income-statement-growth");
-  if (balanceSheet) sources.push("FMP /balance-sheet-statement");
-  if (incomeStatement) sources.push("FMP /income-statement");
-  if (cashFlow) sources.push("FMP /cash-flow-statement");
+  if (statements) sources.push(`${statements.source} annual statements`);
 
   const warnings: string[] = [];
 
@@ -325,31 +365,40 @@ export async function getFundamentals(symbol: string): Promise<FmpFundamentals |
   // it's the more specifically-named "ratios" source for multiples.
   const merged: RawRow = { ...(keyMetrics ?? {}), ...(ratios ?? {}) };
 
-  const peTrailing = pick(merged, ["peRatioTTM", "priceToEarningsRatioTTM", "peTTM"]);
+  let peTrailing = pick(merged, ["peRatioTTM", "priceToEarningsRatioTTM", "peTTM"]);
   const peForward = pick(merged, ["peForwardTTM", "forwardPETTM"]);
   if (peForward === null) {
     warnings.push("Forward P/E unavailable on FMP free tier (requires the paid analyst-estimates endpoint).");
   }
-  const peg = pick(merged, ["pegRatioTTM"]);
+  const peg = pick(merged, ["pegRatioTTM", "priceToEarningsGrowthRatioTTM"]);
   if (peg === null) {
     warnings.push("PEG ratio unavailable from FMP TTM endpoints for this symbol.");
   }
-  const evToEbitda = pick(merged, ["evToEbitdaTTM", "enterpriseValueOverEBITDATTM", "enterpriseValueMultipleTTM"]);
-  const priceToSales = pick(merged, ["priceToSalesRatioTTM", "priceSalesRatioTTM"]);
-  const priceToBook = pick(merged, ["priceToBookRatioTTM", "pbRatioTTM", "priceBookValueRatioTTM"]);
-  const roe = pick(merged, ["roeTTM", "returnOnEquityTTM"]);
+  let evToEbitda = pick(merged, ["evToEbitdaTTM", "evToEBITDATTM", "enterpriseValueOverEBITDATTM", "enterpriseValueMultipleTTM"]);
+  let priceToSales = pick(merged, ["priceToSalesRatioTTM", "priceSalesRatioTTM"]);
+  let priceToBook = pick(merged, ["priceToBookRatioTTM", "pbRatioTTM", "priceBookValueRatioTTM"]);
+  let roe = pick(merged, ["roeTTM", "returnOnEquityTTM"]);
   const roicDirect = pick(merged, ["roicTTM", "returnOnInvestedCapitalTTM"]);
-  const debtToEquity = pick(merged, ["debtEquityRatioTTM", "debtToEquityRatioTTM"]);
+  let debtToEquity = pick(merged, ["debtEquityRatioTTM", "debtToEquityRatioTTM"]);
   let netDebtToEbitda = pick(merged, ["netDebtToEBITDATTM", "netDebtToEbitdaTTM"]);
   let interestCoverage = pick(merged, ["interestCoverageTTM", "interestCoverageRatioTTM"]);
   const grossMarginDirect = pick(merged, ["grossProfitMarginTTM"]);
   const operatingMarginDirect = pick(merged, ["operatingProfitMarginTTM", "operatingIncomeMarginTTM"]);
   const netMarginDirect = pick(merged, ["netProfitMarginTTM"]);
-  const marketCap = pick(merged, ["marketCapTTM", "marketCap"]);
+  let marketCap = pick(merged, ["marketCapTTM", "marketCap"]);
   const freeCashFlowDirect = pick(merged, ["freeCashFlowTTM"]);
   const fcfYieldDirect = pick(merged, ["freeCashFlowYieldTTM"]);
+  // Symbols outside the FMP free plan have no TTM ratios. Market cap (Finnhub profile, in $M) lets us
+  // compute the main multiples from the latest annual filing instead.
+  const missingMultiples = !ratios && !keyMetrics;
+  if (marketCap === null) {
+    const profile = await fetchCompanyProfile(sym).catch(() => null);
+    if (profile && profile.marketCapitalization > 0) marketCap = profile.marketCapitalization * 1_000_000;
+  }
 
-  const revenueGrowthYoy = pick(incomeGrowth, ["growthRevenue", "revenueGrowth"]);
+  const rev0 = pick(statements?.income[0], ["revenue"]);
+  const rev1 = pick(statements?.income[1], ["revenue"]);
+  const revenueGrowthYoy = rev0 != null && rev1 != null && rev1 > 0 ? rev0 / rev1 - 1 : null;
 
   // Fall back to the raw annual income statement for margins/EBIT/interest when TTM ratios lack them.
   const revenue = pick(incomeStatement, ["revenue"]);
@@ -405,6 +454,29 @@ export async function getFundamentals(symbol: string): Promise<FmpFundamentals |
     }
   }
 
+  // Multiples from the latest annual filing + market cap, only where FMP gave no value. These use the
+  // last fiscal year, not trailing-12-month, so they lag FMP's TTM figures; the warning says so.
+  const derived: string[] = [];
+  const fill = (cur: number | null, v: number | null, label: string): number | null => {
+    if (cur !== null || v === null || !Number.isFinite(v)) return cur;
+    derived.push(label);
+    return v;
+  };
+  if (marketCap && marketCap > 0) {
+    peTrailing = fill(peTrailing, netIncome != null && netIncome > 0 ? marketCap / netIncome : null, "P/E");
+    priceToSales = fill(priceToSales, revenue != null && revenue > 0 ? marketCap / revenue : null, "P/S");
+    priceToBook = fill(priceToBook, totalEquity != null && totalEquity > 0 ? marketCap / totalEquity : null, "P/B");
+    const ebitdaForEv = ebitda ?? (ebit != null && cashFlow?.depreciationAndAmortization != null ? ebit + cashFlow.depreciationAndAmortization : null);
+    if (totalDebt != null && ebitdaForEv != null && ebitdaForEv > 0) {
+      evToEbitda = fill(evToEbitda, (marketCap + totalDebt - (cashAndEquivalents ?? 0)) / ebitdaForEv, "EV/EBITDA");
+    }
+  }
+  roe = fill(roe, netIncome != null && totalEquity != null && totalEquity > 0 ? netIncome / totalEquity : null, "ROE");
+  debtToEquity = fill(debtToEquity, totalDebt != null && totalEquity != null && totalEquity > 0 ? totalDebt / totalEquity : null, "debt/equity");
+  if (derived.length > 0) {
+    warnings.push(`${derived.join(", ")} computed from the latest annual filing${marketCap ? " and Finnhub market cap" : ""} (not trailing-12-month) — FMP's free plan has no ratios for this symbol.`);
+  }
+
   const freeCashFlow = freeCashFlowDirect ?? cashFlow?.freeCashFlow ??
     (cashFlow?.operatingCashFlow != null && cashFlow?.capitalExpenditure != null
       ? cashFlow.operatingCashFlow + cashFlow.capitalExpenditure // capex is already negative in FMP's convention
@@ -442,5 +514,8 @@ export async function getFundamentals(symbol: string): Promise<FmpFundamentals |
   };
 
   cacheSet(cacheKey, result, CACHE_TTL_MS);
+  // Persist only when the FMP ratio endpoints actually answered; otherwise a quota/network failure
+  // would pin a statements-only snapshot for a week.
+  if (!missingMultiples) await diskSet(cacheKey, result);
   return result;
 }

@@ -162,13 +162,13 @@ export async function computeIntrinsicValue(
       : null;
   const sharesOut: number | null = fmpSharesOut ?? profileSharesOut;
   if (!fmpSharesOut && profileSharesOut) {
-    warnings.push("Shares outstanding estimated from Finnhub market cap ÷ price — no FMP filing data.");
+    warnings.push("Shares outstanding estimated from Finnhub market cap ÷ price — filings carry no share count.");
   }
   if (oeTTM === null && finnhub?.peTTM && finnhub.peTTM > 0 && anchorPrice && anchorPrice > 0 && sharesOut) {
     const eps = anchorPrice / finnhub.peTTM;
     oeTTM = eps * sharesOut;
     oeSource = "EPS × shares (Finnhub fallback)";
-    warnings.push("Owner earnings estimated from Finnhub P/E — no FMP cash-flow data.");
+    warnings.push("Owner earnings estimated from Finnhub P/E — no cash-flow statement data.");
   }
   if (oeTTM === null || oeTTM <= 0 || !sharesOut || sharesOut <= 0) {
     warnings.push("No positive owner earnings available — cannot value on earnings power.");
@@ -298,7 +298,7 @@ export async function computeIntrinsicValue(
   }
 
   const dataQuality: IntrinsicValueBreakdown["dataQuality"] = fmp ? "full" : "estimated";
-  if (!fmp) warnings.push("FMP unavailable — running on Finnhub's thinner metric set.");
+  if (!fmp) warnings.push("No filing statements available — running on Finnhub's thinner metric set.");
 
   return {
     symbol: sym,

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # local research workspace (backtests, downloaded market data, notes) - never commit
 /research/
+
+# local fundamentals cache (FMP/SEC responses, call budget)
+/.cache/

@@ -19,7 +19,7 @@ function getSecContact(): string {
   return "ai-industry-map research-tool (set SEC_EDGAR_CONTACT in .env.local)";
 }
 
-async function secFetchJson<T>(url: string): Promise<T> {
+export async function secFetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     headers: { "User-Agent": getSecContact(), Accept: "application/json" },
   });
